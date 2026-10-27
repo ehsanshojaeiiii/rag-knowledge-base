@@ -24,6 +24,7 @@ dev = [
 ]
 eval = [
     "markdownify>=1.2.3",
+    "numpy>=2.5.4",
 ]
 
 [build-system]

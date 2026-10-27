@@ -1,0 +1,88 @@
+{"q": "چطور برای ورود به حسابم علاوه بر رمز عبور، کد تأیید پیامکی یا اپ Authenticator فعال کنم؟", "pages": ["accounts/2fa"]}
+{"q": "می‌خوام ببینم چه کسی توی میز کار چه تغییری داده؛ تاریخچه‌ی فعالیت‌های اعضا رو کجا ببینم؟", "pages": ["accounts/iam/audit-log"]}
+{"q": "برای مدیریت سرویس‌ها از طریق API، کلید API رو از کجا بسازم؟", "pages": ["accounts/iam/machine-user"]}
+{"q": "چطور تعیین کنم یک همکار فقط به یک دامنه‌ی مشخص دسترسی داشته باشه نه همه‌ی منابع؟", "pages": ["accounts/iam/policies", "accounts/iam/resources"]}
+{"q": "چرا نمی‌تونم بیشتر از یک مقدار مشخص منبع بسازم؟ سقف استفاده از منابع حسابم کجا تعیین می‌شه؟", "pages": ["accounts/iam/quota"]}
+{"q": "چطور یک همکار رو به حساب کاربری‌ام اضافه کنم که بتونه با من کار کنه؟", "pages": ["accounts/iam/users", "accounts/iam/workspace"]}
+{"q": "رمز عبورم یادم رفته، چطور دوباره وارد پنل بشم؟", "pages": ["accounts/reset-password"]}
+{"q": "کد هدیه‌ای که گرفتم رو کجا وارد کنم تا اعتبار رایگان به کیف پولم اضافه بشه؟", "pages": ["accounts/wallet/coupon"]}
+{"q": "آیا می‌شه هزینه‌ها مستقیم از حساب بانکی کم بشه که سرویس‌هام به خاطر بدهی قطع نشن؟", "pages": ["accounts/wallet/direct-debit"]}
+{"q": "How do I create a new ArvanCloud account with my email address?", "pages": ["accounts/register"]}
+{"q": "چطور مدل‌های زبانی آروان رو داخل AnythingLLM استفاده کنم؟", "pages": ["aiaas/anythingllm"]}
+{"q": "برای فرستادن درخواست چت به یک مدل زبانی، endpoint رو چطور بسازم و rate limit براش بذارم؟", "pages": ["aiaas/api-usage"]}
+{"q": "نمونه کد پایتون با langchain برای وصل شدن به سرویس هوش مصنوعی آروان", "pages": ["aiaas/examples/langchain"]}
+{"q": "How can I call ArvanCloud's language models with the official OpenAI Python SDK?", "pages": ["aiaas/examples/openai"]}
+{"q": "چطور جلوی تولید محتوای ناخواسته یا لو رفتن اطلاعات حساس توسط مدل هوش مصنوعی رو بگیرم؟", "pages": ["aiaas/guardrail"]}
+{"q": "می‌خوام با یک ابزار ویژوال، workflow خودکار بسازم که از مدل‌های آروان استفاده کنه", "pages": ["aiaas/n8n"]}
+{"q": "سرویس پایگاه دانش آروان چطور کار می‌کنه و اسناد چطور به بردار تبدیل می‌شن؟", "pages": ["aiaas/knowledge-base"]}
+{"q": "مراحل ساختن یک پایگاه دانش جدید در پنل چیه و چه مدل embedding می‌شه انتخاب کرد؟", "pages": ["aiaas/knowledge-base/create", "aiaas/knowledge-base"]}
+{"q": "چطور فایل‌های CSS و جاوااسکریپت سایتم رو خودکار کوچیک کنم که صفحه سریع‌تر بالا بیاد؟", "pages": ["cdn/acceleration"]}
+{"q": "الگوریتم پخش بار بین چند سرور اصلی رو کجا تنظیم کنم؟", "pages": ["cdn/advanced-settings"]}
+{"q": "گزارش ترافیک و خطاهای وب‌سایتم رو کجا می‌تونم ببینم؟", "pages": ["cdn/analytics"]}
+{"q": "می‌خوام ترافیک همه‌ی دامنه‌هام رو یک‌جا ببینم و به تفکیک ASN و پاپ‌سایت مقایسه کنم", "pages": ["cdn/analytics/aggregated-reports"]}
+{"q": "چطور لاگ درخواست‌هایی که به CDN می‌رسه رو به سرور لاگ خودم بفرستم؟", "pages": ["cdn/analytics/logging"]}
+{"q": "متریک‌های عملکرد دامنه رو برای مانیتورینگ با Prometheus چطور بگیرم؟", "pages": ["cdn/analytics/metric-exporter"]}
+{"q": "Can I buy an SSL certificate for my website directly from ArvanCloud?", "pages": ["cdn/buy-ssl"]}
+{"q": "چطور کش CDN رو برای سایتم روشن کنم و مدت نگهداری فایل‌ها رو تعیین کنم؟", "pages": ["cdn/caching"]}
+{"q": "What does the ETag header do, and when does the origin answer with 304 Not Modified?", "pages": ["cdn/caching/etag"]}
+{"q": "یک دامنه‌ی دیگه می‌خواد به دامنه‌ی من CNAME بشه ولی مسدود می‌شه؛ چطور اجازه بدم؟", "pages": ["cdn/cname-access"]}
+{"q": "می‌خوام به‌جای صفحه‌ی خطای پیش‌فرض، صفحه‌ی خطای طراحی‌شده‌ی خودم نمایش داده بشه", "pages": ["cdn/custom-pages"]}
+{"q": "رکوردهای DNS دامنه‌ام رو از سرویس‌دهنده‌ی قبلی چطور به آروان منتقل کنم؟", "pages": ["cdn/dns-records", "cdn/dns-records/adding-records"]}
+{"q": "NSهای آروان که پسوند ir دارن برای دامنه‌ی com من ثبت نمی‌شن؛ چه کار کنم؟", "pages": ["cdn/dns-records/change-default-ns"]}
+{"q": "چطور CDN رو فقط برای یک زیردامنه خاموش کنم و ترافیکش مستقیم به سرور بره؟", "pages": ["cdn/dns-records/cloud"]}
+{"q": "می‌خوام از نیم‌سرورهای با اسم دامنه‌ی خودم استفاده کنم، مثل ns1.mydomain.com", "pages": ["cdn/dns-records/custom-ns"]}
+{"q": "می‌خوام ترافیک یک زیردامنه رو بر اساس وزن و منطقه‌ی جغرافیایی بین چند سرور پخش کنم، از طریق DNS", "pages": ["cdn/dns-records/dns-loadbalance"]}
+{"q": "How do I enable DNSSEC so my DNS records can't be spoofed?", "pages": ["cdn/dns-records/dnssec"]}
+{"q": "آروان رو به‌عنوان DNS دوم کنار DNS اصلی خودم برای failover چطور تنظیم کنم؟", "pages": ["cdn/dns-records/secondary-dns"]}
+{"q": "اولین قدم برای فعال کردن CDN روی سایتم چیه؟ دامنه رو کجا اضافه کنم؟", "pages": ["cdn/domain"]}
+{"q": "نمی‌خوام NS دامنه رو عوض کنم؛ آیا می‌شه فقط با CNAME سایت رو پشت CDN آروان برد؟", "pages": ["cdn/domain/cname-setup"]}
+{"q": "NSهایی که آروان داده رو کجا جایگزین NSهای قبلی دامنه کنم؟", "pages": ["cdn/domain/ns-change"]}
+{"q": "Can I move a domain from my ArvanCloud account to a colleague's account?", "pages": ["cdn/domain/transfer"]}
+{"q": "فایروال سرورم درخواست‌های CDN رو مسدود می‌کنه؛ کدوم IPها رو باید مجاز کنم؟", "pages": ["cdn/domain/whitelist"]}
+{"q": "CDN چه هدری به سرور اصلی می‌فرسته که IP واقعی بازدیدکننده رو بفهمم؟", "pages": ["cdn/headers"]}
+{"q": "ارتباط بین سرورهای CDN و سرور اصلی سایتم رو چطور روی HTTPS بذارم؟", "pages": ["cdn/https-settings", "cdn/https-settings/server-certificate"]}
+{"q": "آیا آروان گواهی SSL رایگان می‌ده و چند روز اعتبار داره؟", "pages": ["cdn/https-settings/arvancloud-certificate"]}
+{"q": "گواهی SSL که خودم خریدم رو چطور روی CDN آپلود کنم؟", "pages": ["cdn/https-settings/custom-certificate"]}
+{"q": "How can I identify TLS clients by their JA3 fingerprint?", "pages": ["cdn/https-settings/ja3-fingerprint"]}
+{"q": "می‌خوام یک گروه IP بسازم و یکجا براشون قانون فایروال بنویسم", "pages": ["cdn/list", "cdn/security/firewall"]}
+{"q": "چطور درخواست‌های سایت رو بین چند سرور با محتوای یکسان پخش کنم که یک سرور تحت فشار نباشه؟", "pages": ["cdn/load-balancing", "cdn/advanced-settings"]}
+{"q": "آیا می‌شه وردپرس یا ابزارهای آماده رو با یک کلیک از بازارچه‌ی آروان نصب کرد؟", "pages": ["cdn/marketplace"]}
+{"q": "برای یک مسیر خاص سایتم تنظیمات کش متفاوتی بذارم، مثلاً فقط برای /blog", "pages": ["cdn/page-rules"]}
+{"q": "How do I redirect one URL on my site to another address?", "pages": ["cdn/page-rules/redirect"]}
+{"q": "سایتم زیر حمله‌ی DDoS هست؛ چه حالت‌های محافظتی دارم؟", "pages": ["cdn/security/ddos"]}
+{"q": "چطور ربات‌های گوگل رو از ربات‌های مخرب جدا کنم که بلاک نشن؟", "pages": ["cdn/security/known-bots"]}
+{"q": "می‌خوام SSH و ایمیل سرورم هم از پشت CDN محافظت بشن، نه فقط وب", "pages": ["cdn/security/l4-proxy"]}
+{"q": "Limit each visitor to a fixed number of requests per minute to stop abuse", "pages": ["cdn/security/rate-limit"]}
+{"q": "WAF آروان حمله‌های SQL injection رو چطور تشخیص می‌ده؟", "pages": ["cdn/security/waf"]}
+{"q": "سایتم از پشت CDN باز نمی‌شه؛ مشکل رو چطور عیب‌یابی کنم؟", "pages": ["cdn/troubleshoot"]}
+{"q": "چطور یک فایل رو در فضای ابری آروان آپلود کنم؟ از کجا شروع کنم؟", "pages": ["object-storage"]}
+{"q": "صندوقچه‌ام رو فقط برای خوندن با یک کاربر دیگه به اشتراک بذارم", "pages": ["object-storage/bucket-policy"]}
+{"q": "فایل‌هایی که قدیمی‌تر از ۳۰ روز هستن خودکار از صندوقچه پاک بشن", "pages": ["object-storage/buckets/lifecycle"]}
+{"q": "جلوگیری از حذف یا بازنویسی فایل‌ها برای مدت مشخص در فضای ابری", "pages": ["object-storage/buckets/object-lock"]}
+{"q": "Host a static website from an ArvanCloud storage bucket", "pages": ["object-storage/buckets/static-website"]}
+{"q": "اگه یک فایل رو اشتباهی بازنویسی کنم، نسخه‌ی قبلیش رو می‌تونم برگردونم؟", "pages": ["object-storage/buckets/versioning"]}
+{"q": "مرورگر به خاطر CORS اجازه نمی‌ده فایل‌های صندوقچه رو از سایتم لود کنم", "pages": ["object-storage/buckets/cors-setting"]}
+{"q": "فایل‌های صندوقچه از روی دامنه‌ی خودم مثل files.example.com باز بشن", "pages": ["object-storage/buckets/custom-domain"]}
+{"q": "آیا فایل‌های آپلودشده برای ویروس اسکن می‌شن؟", "pages": ["object-storage/buckets/antivirus"]}
+{"q": "Migrate my files from AWS S3 to ArvanCloud object storage", "pages": ["object-storage/migration"]}
+{"q": "حداکثر حجم یک فایل و محدودیت‌های فضای ابری آروان چیه؟", "pages": ["object-storage/limits"]}
+{"q": "قیمت ماهانه‌ی یک سرور ابری با ۴ هسته و ۸ گیگ رم چقدره؟", "pages": []}
+{"q": "چطور در آروان یک کلاستر کوبرنتیز بسازم و اپلیکیشنم رو دیپلوی کنم؟", "pages": []}
+{"q": "آیا آروان دیتابیس MongoDB مدیریت‌شده ارائه می‌ده؟", "pages": []}
+{"q": "چطور ویدیوی آموزشی‌ام رو در سرویس ویدیوی آروان آپلود و استریم کنم؟", "pages": []}
+{"q": "بهترین دستور پخت قورمه سبزی چیه؟", "pages": []}
+{"q": "نتیجه‌ی بازی دیروز پرسپولیس چی شد؟", "pages": []}
+{"q": "How do I set up a VPN on my iPhone?", "pages": []}
+{"q": "What is the capital of Australia?", "pages": []}
+{"q": "چطور روی سرور ابری آروان سیستم‌عامل اوبونتو نصب کنم و با SSH وصل بشم؟", "pages": []}
+{"q": "از دیتابیس PostgreSQL مدیریت‌شده‌ی آروان چطور بکاپ خودکار بگیرم؟", "pages": []}
+{"q": "چطور بین سرورهای ابری‌ام یک شبکه‌ی خصوصی (VPC) بسازم؟", "pages": []}
+{"q": "پخش زنده‌ی یک رویداد با سرویس ویدیوی آروان چطور انجام می‌شه؟", "pages": []}
+{"q": "Is there a Terraform provider for creating ArvanCloud cloud servers?", "pages": []}
+{"q": "How many GPUs can I attach to a single ArvanCloud cloud server?", "pages": []}
+{"q": "What's the weather forecast for Tehran tomorrow?", "pages": []}
+{"q": "چطور زبان انگلیسی رو سریع یاد بگیرم؟", "pages": []}
+{"q": "Who won the 2022 FIFA World Cup?", "pages": []}
+{"q": "قیمت دلار امروز چنده؟", "pages": []}
+{"q": "Explain Einstein's theory of relativity in simple words.", "pages": []}
+{"q": "بهترین گوشی موبایل سال ۲۰۲۶ کدومه؟", "pages": []}
