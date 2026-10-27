@@ -69,24 +69,37 @@ Checked against the packages and source (2026-10-28):
 **Context.** The challenge provides embedding models only and leaves the rest of the architecture open.
 
 **Decision.** Call the LLM through the OpenAI-compatible `chat/completions` API, configured by `LLM_BASE_URL`,
-`LLM_API_KEY` and `LLM_MODEL`. Locally the model is served by Docker Model Runner and declared in `compose.yaml`
-(`models:`), so `make run` pulls and starts it and injects its URL and name — no API key and nothing to install
-besides Docker Desktop. It runs llama.cpp on the host GPU (Metal on Apple Silicon), outside the Docker VM, and
-unloads after 5 idle minutes. Ollama was the alternative; Model Runner wins because Compose manages the model like
-any other dependency.
+`LLM_API_KEY` and `LLM_MODEL`. Locally, `compose.yaml` runs **Ollama** with **Gemma 4 (`gemma4:e4b-it-qat`)**; the
+first start downloads the model, later starts reuse it. Nothing besides Docker is needed, and no API key.
 
-**Why.** It is the de-facto standard interface: ArvanCloud AIaaS, Ollama, vLLM and OpenAI all serve it, so switching
-provider is configuration, not code. The specific model is chosen by measuring answer quality on Persian and
-English questions (**Proposed** until measured). First candidate: `ai/gemma4:e4b` (6.0 GB, checked in the
-registry manifest), the newest open model family at a laptop size; `12b` (7.3 GB) needs ~9 GB of memory while
-answering, and Qwen 3.6/3.8 start at ~16–18 GB.
+**Why Ollama.** It is the market standard for running models on one machine (checked 2026-10-28: 185k GitHub
+stars, 193M Docker pulls), runs the same on Linux, macOS and Windows, and uses an NVIDIA GPU on Linux when given one.
+Alternatives: **vLLM** (96k stars) is the standard for production serving on GPU servers and is what this service
+would use at scale — the switch is configuration, because both speak the same API; **Docker Model Runner** (0.7k
+stars) integrates with Compose but is new and needs Docker Desktop or a plugin; **LM Studio** is an excellent
+desktop app (llama.cpp and MLX engines) but is closed source and has no official Docker image, so `make run` could
+not include it — it still works with this service by pointing `LLM_BASE_URL` at it; Hugging Face TGI is archived;
+a hosted API (ArvanCloud AIaaS, OpenAI) costs per token and would require reviewers to have a key.
+
+**Why Gemma 4 e4b, QAT build.** The newest open model family that fits a laptop (~6 GB); QAT (quantization-aware
+training) keeps more quality at 4-bit than quantizing afterwards. Measured through the API on 88 questions (decision 6): all 20 unanswerable
+questions refused, 55 of 68 answerable ones answered with a citation to a labelled page.
+
+**Thinking off.** Gemma 4 reasons before answering by default: ~690 hidden tokens for a 26-token answer. With
+`reasoning_effort: none` (`LLM_REASONING_EFFORT`, set in `compose.yaml`) the same answer took 2.7 s instead of
+13.3 s on an Apple GPU, and on the questions both runs covered, thinking produced more wrong answers (5 vs 3), not
+fewer. Retrieval and the two grounding gates do the work that matters; the model only phrases the evidence.
+
+**Speed.** Docker on macOS cannot use the Apple GPU, so in `make run` on a Mac Gemma runs on the CPU (10–25 s per
+answer measured with thinking on). With Ollama running natively (README) answers take 1–4 s; on Linux the Ollama
+container uses an NVIDIA GPU when given one.
+Larger options: `gemma4:12b` (7.7 GB); Qwen 3.6/3.8 start at ~16–18 GB.
 
 **Grounding.** Two gates: no chunk above the similarity threshold → "not enough information" without calling the
 LLM; after the LLM, the answer must cite at least one source and only sources it was given. Source text is
 HTML-escaped inside `<source>` tags so a document cannot close its tag and pose as instructions. The threshold is
 a cosine similarity, not the fused search score: the fused score only orders results and always has a winner.
-Measured with BGE-M3: relevant chunks scored 0.63–0.71, unrelated ones 0.25–0.36; the default 0.45 is calibrated by
-the evaluation.
+The threshold (0.58 for BGE-M3) is calibrated by the evaluation, see decision 6.
 
 ## 5. PDF text extraction with poppler (`pdftotext`)
 
@@ -97,12 +110,46 @@ the evaluation.
 reversed Persian text; PyMuPDF was close to poppler but is AGPL-licensed. Poppler's two defects — bidi control
 characters and the split لا ligature (`اطالعات`) — are handled by normalisation.
 
-## 6. Embedding model
+## 6. Embedding model: `Bge-m3`, refusal threshold 0.58
 
-**Status: Proposed.** Candidates: `Bge-m3` (1024 d), `Embedding-3-Small` (1536 d), `Embedding-3-Large` (3072 d),
-`Gemini-embedding-001` (3072 d). The choice will be made from Recall@k and MRR on a labelled Persian + English
-question set, plus latency and index size. A first probe favoured `Bge-m3` (best separation of related vs unrelated
-text, lowest latency); that is a hypothesis until the evaluation runs.
+**Status: Accepted** (measured 2026-10-28 with `eval/evaluate.py`).
+
+**Method.** Corpus: 138 ArvanCloud documentation pages (98 Persian, 40 English: CDN, object storage, AIaaS,
+accounts), 1,201 chunks. Questions: 88, written in both languages, some asked in one language about a page that
+exists only in the other; 68 are answerable (labelled with the pages that answer them) and 20 are not, many of them
+near misses on the same topics (e.g. a price the pages never state). A question counts as found when one of the
+top 5 chunks — what the language model receives — comes from a labelled page.
+
+| Model | Dims | Recall@1 | Recall@5 | MRR@10 | Answer/abstain acc. | s/request (64 texts) |
+|---|---|---|---|---|---|---|
+| **Bge-m3** | 1024 | 0.63 | 0.90 | 0.75 | 0.93 | **1.4** |
+| Embedding-3-Small | 1536 | 0.57 | 0.87 | 0.69 | 0.90 | 4.0 |
+| Embedding-3-Large | 3072 | 0.65 | 0.96 | 0.78 | 0.92 | 4.5 |
+| Gemini-embedding-001 | 3072 | 0.76 | 0.97 | 0.86 | 0.95 | 55.8 |
+
+**Decision.** `Bge-m3`. Gemini and Embedding-3-Large retrieve better, but:
+
+- **Speed and reliability.** Every upload and every question waits for the embedding API. Gemini averaged 56 s per
+  request because the gateway returned 504 timeouts and requests had to be retried; BGE-M3 was 3–40× faster.
+- **Index size.** 3072 dimensions are 3× the storage and exceed pgvector's 2,000-dimension limit for an HNSW index
+  on `vector`; they would need `halfvec`. 1024 fits directly.
+- **Separation.** BGE-M3 separates answerable from unanswerable questions as well as the larger models (0.93), and
+  that is what the "not enough information" gate depends on.
+- **Open weights.** BGE-M3 (BAAI, MIT licence, multilingual including Persian) can be self-hosted, so documents never
+  have to leave the company's infrastructure.
+
+Switching is configuration plus re-embedding: `EMBEDDING_MODEL`, and for a 3072-dimension model a migration to
+`halfvec(3072)`. If retrieval quality matters more than latency, Gemini is the upgrade path.
+
+**Threshold.** Similarity is model-specific, so the threshold is calibrated per model. For BGE-M3 the weakest
+answerable question's best chunk scored 0.588 and the strongest unanswerable near miss 0.618: no threshold separates
+them perfectly. `min_similarity = 0.58` refuses none of the 68 answerable questions and stops 13 of the 20
+unanswerable ones before the language model is called; the rest must be refused by the model (the second gate).
+
+**Hybrid search, measured.** With the same embeddings, adding an OR keyword query lowered Recall@5 from 0.90 to
+0.85: common domain words (CDN, آروان) matched almost every chunk and pushed the right one down. The keyword
+query is therefore an AND of the question's words: on natural questions it changes nothing (0.90), and it still
+adds exact matches such as error codes and product names, which embeddings handle poorly.
 
 ## 7. Build the service rather than deploy a RAG platform
 
