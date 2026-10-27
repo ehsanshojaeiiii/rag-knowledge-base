@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from rag_kb import documents, retrieval
+from rag_kb import answering, documents, retrieval
 from rag_kb.config import get_settings
 from rag_kb.db import SessionDep
 from rag_kb.embeddings import Embedder, get_embedder
@@ -16,6 +16,7 @@ from rag_kb.models import Document
 router = APIRouter()
 
 EmbedderDep = Annotated[Embedder, Depends(get_embedder)]
+LLMDep = Annotated[answering.LLM, Depends(answering.get_llm)]
 FileField = Annotated[
     UploadFile, File(description="PDF (text, not scanned), Markdown or plain text")
 ]
@@ -44,6 +45,11 @@ class DocumentOut(BaseModel):
 class SearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=20)
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    top_k: int = Field(default=5, ge=1, le=10, description="Chunks to consider as sources")
 
 
 @router.get("/health", tags=["health"])
@@ -119,6 +125,17 @@ def search(
     Only the current version of existing documents is searched.
     """
     return retrieval.search(session, embedder, request.query, request.top_k)
+
+
+@router.post("/ask", tags=["answers"])
+def ask(
+    session: SessionDep, embedder: EmbedderDep, llm: LLMDep, request: AskRequest
+) -> answering.Answer:
+    """Answer a question from the documents, with a citation for every source used.
+
+    `status` is `insufficient_information` when the documents do not support an answer.
+    """
+    return answering.answer(session, embedder, llm, request.question, request.top_k)
 
 
 def _read(file: UploadFile) -> bytes:

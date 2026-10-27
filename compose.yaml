@@ -23,6 +23,10 @@ services:
         required: false
     environment:
       DATABASE_URL: postgresql+psycopg://rag:rag@db:5432/rag
+      # Ollama runs on the host (natively, to use the GPU); override in .env for a hosted model.
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:

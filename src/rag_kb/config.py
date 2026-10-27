@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     embedding_api_key: SecretStr | None = None
     embedding_model: str = "Bge-m3"
 
+    # Any OpenAI-compatible chat endpoint; the default is a local Ollama.
+    llm_base_url: str = "http://localhost:11434/v1"
+    llm_api_key: SecretStr = SecretStr("ollama")  # Ollama ignores the key; hosted APIs need one
+    llm_model: str = "gemma4"
+
+    # Below this cosine similarity a chunk is not treated as evidence (calibrated by evaluation).
+    min_similarity: float = 0.45
+
     max_upload_bytes: int = 20 * 1024 * 1024
 
 

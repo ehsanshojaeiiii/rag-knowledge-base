@@ -73,7 +73,15 @@ Checked against the packages and source (2026-10-28):
 
 **Why.** It is the de-facto standard interface: ArvanCloud AIaaS, Ollama, vLLM and OpenAI all serve it, so switching
 provider is configuration, not code. The specific model is chosen by measuring answer quality on Persian and
-English questions (**Proposed** until measured).
+English questions (**Proposed** until measured). First candidate: Gemma 4 (default tag, ~6.6 GB), the newest
+open model family available in Ollama at a laptop-friendly size; Qwen 3.8 is only published at ~18 GB.
+
+**Grounding.** Two gates: no chunk above the similarity threshold → "not enough information" without calling the
+LLM; after the LLM, the answer must cite at least one source and only sources it was given. Source text is
+HTML-escaped inside `<source>` tags so a document cannot close its tag and pose as instructions. The threshold is
+a cosine similarity, not the fused search score: the fused score only orders results and always has a winner.
+Measured with BGE-M3: relevant chunks scored 0.63–0.71, unrelated ones 0.25–0.36; the default 0.45 is calibrated by
+the evaluation.
 
 ## 5. PDF text extraction with poppler (`pdftotext`)
 

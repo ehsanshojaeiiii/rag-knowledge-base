@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from testcontainers.community.postgres import PostgresContainer
 
+from rag_kb.answering import LLMUnavailable, get_llm
 from rag_kb.config import get_settings
 from rag_kb.db import get_engine
 from rag_kb.embeddings import EmbeddingUnavailable, get_embedder
@@ -41,6 +42,21 @@ class FakeEmbedder:
         return vector
 
 
+class FakeLLM:
+    """Stand-in for the chat model: returns a scripted reply and records every prompt it gets."""
+
+    def __init__(self) -> None:
+        self.reply = "Grounded answer [1]."
+        self.prompts: list[str] = []
+        self.fail = False
+
+    def complete(self, system: str, user: str) -> str:
+        self.prompts.append(user)
+        if self.fail:
+            raise LLMUnavailable("Language model request failed: APIConnectionError")
+        return self.reply
+
+
 @pytest.fixture(scope="session")
 def monkeypatch_session() -> Iterator[pytest.MonkeyPatch]:
     with pytest.MonkeyPatch.context() as mp:
@@ -66,8 +82,14 @@ def embedder() -> FakeEmbedder:
 
 
 @pytest.fixture
-def client(database_url: str, embedder: FakeEmbedder) -> Iterator[TestClient]:
+def llm() -> FakeLLM:
+    return FakeLLM()
+
+
+@pytest.fixture
+def client(database_url: str, embedder: FakeEmbedder, llm: FakeLLM) -> Iterator[TestClient]:
     app.dependency_overrides[get_embedder] = lambda: embedder
+    app.dependency_overrides[get_llm] = lambda: llm
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

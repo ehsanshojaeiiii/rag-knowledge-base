@@ -12,7 +12,9 @@ Documents can be added, edited and deleted at any time; answers never use delete
 
 ## Quick start
 
-Requirements: Docker with Compose, and `make`.
+Requirements: Docker with Compose, `make`, and [Ollama](https://ollama.com) running on the host with the model
+pulled (`ollama pull gemma4`) — or any OpenAI-compatible chat endpoint set in `.env` (`LLM_BASE_URL`, `LLM_API_KEY`,
+`LLM_MODEL`).
 
 ```bash
 cp .env.example .env        # then set EMBEDDING_API_KEY
@@ -46,5 +48,8 @@ score, not pass/fail.
 |---|---|
 | Process text PDF, plain text and Markdown | `tests/test_ingest.py`, `TestDocumentProcessing` |
 | Add, edit, delete; outdated content never used | `TestChangeManagement` — edit leaves only the new version; a failed edit keeps the old one; stale `If-Match` → 409; delete removes every chunk. `TestOutdatedContentIsNeverRetrieved` — search ignores old versions even if a stale chunk is left behind |
+| Answer only from retrieved content, with traceable citations | `TestGroundedAnswers` — cites document, version and section; the model sees only retrieved sources; document text cannot break out of its source tag; answers without valid citations are withheld |
+| Say clearly when information is missing | `TestNotEnoughInformation` — unrelated questions are refused without calling the model; model refusals are reported |
+| Answers follow document changes | `TestAnswersFollowDocumentChanges` — after an edit only the new version reaches the model; after a delete the question is refused |
 | Retrieve the parts related to the question | `TestRelevantRetrieval` — best chunk ranks first, exact identifiers, Persian half-space spellings, citation fields |
 | API access with documented endpoints | `TestApiAccess` |

@@ -49,7 +49,7 @@ class TestRelevantRetrieval:
         assert hit["document_id"] == doc["id"]
         assert (hit["version"], hit["section"], hit["page"]) == (1, "CDN > Cache", None)
         assert "Purge the cache" in hit["content"]
-        assert hit["similarity"] is not None
+        assert 0 < hit["similarity"] <= 1
 
     def test_top_k_limits_the_number_of_hits(self, client: TestClient) -> None:
         for i in range(4):

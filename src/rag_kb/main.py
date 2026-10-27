@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from rag_kb import api
+from rag_kb.answering import LLMUnavailable
 from rag_kb.documents import DocumentNotFound, VersionConflict
 from rag_kb.embeddings import EmbeddingUnavailable
 from rag_kb.ingest import UnreadableDocument, UnsupportedDocument
@@ -22,6 +23,7 @@ _ERROR_STATUS = {
     UnsupportedDocument: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     UnreadableDocument: status.HTTP_422_UNPROCESSABLE_CONTENT,
     EmbeddingUnavailable: status.HTTP_503_SERVICE_UNAVAILABLE,
+    LLMUnavailable: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 

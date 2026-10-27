@@ -35,9 +35,7 @@ _SEARCH = text("""
         JOIN documents d ON d.id = c.document_id AND d.version = c.version
     ),
     semantic AS (
-        SELECT id,
-               row_number() OVER (ORDER BY embedding <=> CAST(:embedding AS vector)) AS rank,
-               1 - (embedding <=> CAST(:embedding AS vector)) AS similarity
+        SELECT id, row_number() OVER (ORDER BY embedding <=> CAST(:embedding AS vector)) AS rank
         FROM current_chunks
         ORDER BY embedding <=> CAST(:embedding AS vector)
         LIMIT :candidates
@@ -50,7 +48,7 @@ _SEARCH = text("""
         LIMIT :candidates
     )
     SELECT c.id AS chunk_id, c.document_id, d.title, c.version, c.section, c.page, c.content,
-           s.similarity,
+           1 - (c.embedding <=> CAST(:embedding AS vector)) AS similarity,
            (coalesce(1.0 / (:rrf_k + s.rank), 0) + coalesce(1.0 / (:rrf_k + k.rank), 0))::float8
                AS score
     FROM semantic s
@@ -71,7 +69,7 @@ class Hit:
     section: str | None
     page: int | None
     content: str
-    similarity: float | None  # cosine similarity; None when found by keyword only
+    similarity: float  # cosine similarity to the question, -1..1; used to decide relevance
     score: float  # fused rank score; only comparable within one search
 
 
