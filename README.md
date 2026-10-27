@@ -12,26 +12,26 @@ Documents can be added, edited and deleted at any time; answers never use delete
 
 ## Quick start
 
-Requirements: Docker with Compose.
+Requirements: Docker with Compose, and `make`.
 
 ```bash
 cp .env.example .env        # then set EMBEDDING_API_KEY
-docker compose up --build
+make run                    # build and start Postgres + API
 ```
 
 - API: http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
 - OpenAPI spec: http://localhost:8000/openapi.json
 
+Stop with `make down`.
+
 ## Development
 
 Requirements: [uv](https://docs.astral.sh/uv/) and Docker (tests start a throwaway Postgres container).
 
 ```bash
-uv sync                     # install dependencies
-docker compose up -d db     # start Postgres + pgvector
-uv run alembic upgrade head # apply migrations
-uv run fastapi dev          # run the API with reload
-uv run pytest               # tests
-uv run ruff check . && uv run ruff format --check . && uv run mypy src
+make dev                    # local API with auto-reload, Postgres in Docker
+make test                   # tests
+make check                  # lint + type checks + tests (what CI runs)
+make format                 # fix formatting
 ```

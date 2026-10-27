@@ -10,15 +10,16 @@ out, with versioned document updates. Read [docs/architecture.md](docs/architect
 
 ## Commands
 
+Commands (all in the `Makefile`):
+
 ```bash
-uv sync                                   # install
-docker compose up -d db                   # Postgres + pgvector for local runs
-uv run alembic upgrade head               # migrate
-uv run fastapi dev                        # run with reload (entrypoint in pyproject.toml)
-uv run pytest                             # tests (start a throwaway Postgres via testcontainers)
-uv run ruff check . && uv run ruff format --check . && uv run mypy src tests
-docker compose up --build                 # full stack
+make dev        # local API with auto-reload (Postgres in Docker, migrations applied)
+make check      # lint + mypy --strict + tests — run before every commit; CI runs the same
+make format     # fix formatting
+make run        # full stack in Docker
 ```
+
+New migration: `uv run alembic revision -m "<what changes>"`, then edit `upgrade()` and `downgrade()`.
 
 ## Invariants — never break these
 

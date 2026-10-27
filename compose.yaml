@@ -1,5 +1,6 @@
 services:
   db:
+    restart: unless-stopped
     image: pgvector/pgvector:0.8.7-pg18-trixie
     environment:
       POSTGRES_USER: rag
@@ -16,6 +17,7 @@ services:
 
   api:
     build: .
+    restart: unless-stopped
     env_file:
       - path: .env
         required: false
