@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: SecretStr = SecretStr("not-needed")  # local runners ignore it; hosted ones need it
     llm_model: str = "gemma4:e4b-it-qat"
-    # Thinking models (Gemma 4) reason before answering; None leaves the model's default.
+    # Thinking models (Gemma 4) reason before answering; None sends nothing, leaving the model's
+    # default (models without reasoning reject the parameter). compose.yaml sets "none" for Gemma.
     llm_reasoning_effort: ReasoningEffort = None
 
     # Below this cosine similarity a chunk is not treated as evidence. Calibrated for Bge-m3 by

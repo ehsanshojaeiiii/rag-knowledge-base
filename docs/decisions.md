@@ -82,13 +82,14 @@ not include it — it still works with this service by pointing `LLM_BASE_URL` a
 a hosted API (ArvanCloud AIaaS, OpenAI) costs per token and would require reviewers to have a key.
 
 **Why Gemma 4 e4b, QAT build.** The newest open model family that fits a laptop (~6 GB); QAT (quantization-aware
-training) keeps more quality at 4-bit than quantizing afterwards. Measured through the API on 88 questions (decision 6): all 20 unanswerable
-questions refused, 55 of 68 answerable ones answered with a citation to a labelled page.
+training) keeps more quality at 4-bit than quantizing afterwards. Measured through the API on 88 questions (decision 6):
+all 20 unanswerable questions refused, 55 of 68 answerable ones answered with a citation to a labelled page.
 
 **Thinking off.** Gemma 4 reasons before answering by default: ~690 hidden tokens for a 26-token answer. With
 `reasoning_effort: none` (`LLM_REASONING_EFFORT`, set in `compose.yaml`) the same answer took 2.7 s instead of
 13.3 s on an Apple GPU, and on the questions both runs covered, thinking produced more wrong answers (5 vs 3), not
 fewer. Retrieval and the two grounding gates do the work that matters; the model only phrases the evidence.
+The parameter is sent only when set, because models without reasoning reject it.
 
 **Speed.** Docker on macOS cannot use the Apple GPU, so in `make run` on a Mac Gemma runs on the CPU (10–25 s per
 answer measured with thinking on). With Ollama running natively (README) answers take 1–4 s; on Linux the Ollama
