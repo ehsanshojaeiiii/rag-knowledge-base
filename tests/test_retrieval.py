@@ -2,11 +2,11 @@
 
 from typing import Any
 
+from conftest import FakeEmbedder
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from test_documents import replace, upload
 
-from conftest import FakeEmbedder
 from rag_kb.models import Chunk
 from rag_kb.retrieval import keyword_query
 
