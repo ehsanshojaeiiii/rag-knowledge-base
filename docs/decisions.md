@@ -76,3 +76,18 @@ characters and the split لا ligature (`اطالعات`) — are handled by nor
 `Gemini-embedding-001` (3072 d). The choice will be made from Recall@k and MRR on a labelled Persian + English
 question set, plus latency and index size. A first probe favoured `Bge-m3` (best separation of related vs unrelated
 text, lowest latency); that is a hypothesis until the evaluation runs.
+
+## 7. Build the service rather than deploy a RAG platform
+
+**Context.** Mature open-source RAG products exist and are actively maintained (checked 2026-10-27): RAGFlow
+(~93k GitHub stars), Dify (~160k), AnythingLLM (~68k), PrivateGPT (~58k), Onyx (~33k), Kotaemon (~26k).
+Frameworks exist too: LangChain, LlamaIndex, Haystack, txtai.
+
+**Decision.** Build a small service, borrowing focused libraries (decision 3), instead of deploying a platform.
+
+**Why.** The platforms are complete products — web UI, user management, connectors, several supporting services —
+so adopting one would mean configuring someone else's system rather than designing one, and the parts the
+challenge grades (versioned change management, retrieval quality, grounded citations, abstention, tests) would live
+in code we neither wrote nor could fully explain. They remain useful as references for patterns such as hybrid
+search and citation formats. In production, the build-or-adopt answer depends on the team: a platform wins when the
+need is a generic chat-with-documents UI; a focused service wins when RAG is embedded in another product's API.
