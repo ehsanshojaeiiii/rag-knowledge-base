@@ -15,10 +15,10 @@ class Settings(BaseSettings):
     embedding_api_key: SecretStr | None = None
     embedding_model: str = "Bge-m3"
 
-    # Any OpenAI-compatible chat endpoint; the default is a local Ollama.
-    llm_base_url: str = "http://localhost:11434/v1"
-    llm_api_key: SecretStr = SecretStr("ollama")  # Ollama ignores the key; hosted APIs need one
-    llm_model: str = "gemma4"
+    # Any OpenAI-compatible chat endpoint; the default is Docker Model Runner on this machine.
+    llm_base_url: str = "http://localhost:12434/engines/v1"
+    llm_api_key: SecretStr = SecretStr("not-needed")  # local runners ignore it; hosted ones need it
+    llm_model: str = "ai/gemma4:e4b"
 
     # Below this cosine similarity a chunk is not treated as evidence (calibrated by evaluation).
     min_similarity: float = 0.45

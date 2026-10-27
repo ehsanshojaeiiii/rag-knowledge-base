@@ -69,12 +69,17 @@ Checked against the packages and source (2026-10-28):
 **Context.** The challenge provides embedding models only and leaves the rest of the architecture open.
 
 **Decision.** Call the LLM through the OpenAI-compatible `chat/completions` API, configured by `LLM_BASE_URL`,
-`LLM_API_KEY` and `LLM_MODEL`. The default is a local Ollama model so the project runs with no extra credentials.
+`LLM_API_KEY` and `LLM_MODEL`. Locally the model is served by Docker Model Runner and declared in `compose.yaml`
+(`models:`), so `make run` pulls and starts it and injects its URL and name — no API key and nothing to install
+besides Docker Desktop. It runs llama.cpp on the host GPU (Metal on Apple Silicon), outside the Docker VM, and
+unloads after 5 idle minutes. Ollama was the alternative; Model Runner wins because Compose manages the model like
+any other dependency.
 
 **Why.** It is the de-facto standard interface: ArvanCloud AIaaS, Ollama, vLLM and OpenAI all serve it, so switching
 provider is configuration, not code. The specific model is chosen by measuring answer quality on Persian and
-English questions (**Proposed** until measured). First candidate: Gemma 4 (default tag, ~6.6 GB), the newest
-open model family available in Ollama at a laptop-friendly size; Qwen 3.8 is only published at ~18 GB.
+English questions (**Proposed** until measured). First candidate: `ai/gemma4:e4b` (6.0 GB, checked in the
+registry manifest), the newest open model family at a laptop size; `12b` (7.3 GB) needs ~9 GB of memory while
+answering, and Qwen 3.6/3.8 start at ~16–18 GB.
 
 **Grounding.** Two gates: no chunk above the similarity threshold → "not enough information" without calling the
 LLM; after the LLM, the answer must cite at least one source and only sources it was given. Source text is

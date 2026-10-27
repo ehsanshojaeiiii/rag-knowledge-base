@@ -12,9 +12,8 @@ Documents can be added, edited and deleted at any time; answers never use delete
 
 ## Quick start
 
-Requirements: Docker with Compose, `make`, and [Ollama](https://ollama.com) running on the host with the model
-pulled (`ollama pull gemma4`) — or any OpenAI-compatible chat endpoint set in `.env` (`LLM_BASE_URL`, `LLM_API_KEY`,
-`LLM_MODEL`).
+Requirements: Docker Desktop with **Docker Model Runner** enabled (Settings → AI, with host-side TCP support), and
+`make`. The first `make run` pulls the language model (`ai/gemma4:e4b`, ~6 GB), which runs on the host GPU.
 
 ```bash
 cp .env.example .env        # then set EMBEDDING_API_KEY

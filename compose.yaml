@@ -23,15 +23,21 @@ services:
         required: false
     environment:
       DATABASE_URL: postgresql+psycopg://rag:rag@db:5432/rag
-      # Ollama runs on the host (natively, to use the GPU); override in .env for a hosted model.
-      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    models:
+      llm:
+        endpoint_var: LLM_BASE_URL
+        model_var: LLM_MODEL
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
+
+# Pulled and served by Docker Model Runner on the host GPU; Compose passes its URL and name to the API.
+models:
+  llm:
+    model: ai/gemma4:e4b
+    context_size: 8192
 
 volumes:
   pgdata:
