@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from openai.types.shared import ReasoningEffort
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,13 +16,16 @@ class Settings(BaseSettings):
     embedding_api_key: SecretStr | None = None
     embedding_model: str = "Bge-m3"
 
-    # Any OpenAI-compatible chat endpoint; the default is Docker Model Runner on this machine.
-    llm_base_url: str = "http://localhost:12434/engines/v1"
+    # Any OpenAI-compatible chat endpoint; the default is the Ollama service from compose.yaml.
+    llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: SecretStr = SecretStr("not-needed")  # local runners ignore it; hosted ones need it
-    llm_model: str = "ai/gemma4:e4b"
+    llm_model: str = "gemma4:e4b-it-qat"
+    # Thinking models (Gemma 4) reason before answering; None leaves the model's default.
+    llm_reasoning_effort: ReasoningEffort = None
 
-    # Below this cosine similarity a chunk is not treated as evidence (calibrated by evaluation).
-    min_similarity: float = 0.45
+    # Below this cosine similarity a chunk is not treated as evidence. Calibrated for Bge-m3 by
+    # eval/evaluate.py: the highest value that still refuses none of the answerable questions.
+    min_similarity: float = 0.58
 
     max_upload_bytes: int = 20 * 1024 * 1024
 

@@ -1,15 +1,15 @@
 .PHONY: run down dev test check format
 
-run: ## Build and start Postgres + API in Docker
+run: ## Build and start Postgres, Ollama and the API in Docker
 	docker compose up --build --detach --wait
 	@echo "API: http://localhost:8000  Swagger UI: http://localhost:8000/docs"
 
 down: ## Stop the stack
 	docker compose down
 
-dev: ## Run the API locally with auto-reload (Postgres in Docker)
+dev: ## Run the API locally with auto-reload (Postgres and Ollama in Docker)
 	uv sync
-	docker compose up --detach --wait db
+	docker compose up --detach --wait db ollama-pull
 	uv run alembic upgrade head
 	uv run fastapi dev
 
