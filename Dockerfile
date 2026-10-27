@@ -1,4 +1,4 @@
-FROM python:3.13.18-slim-trixie AS build
+FROM python:3.14.10-slim-trixie AS build
 COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
 WORKDIR /app
@@ -9,8 +9,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-dev --no-editable
 
-FROM python:3.13.18-slim-trixie
-RUN useradd --system --uid 10001 app
+FROM python:3.14.10-slim-trixie
+RUN apt-get update && apt-get install --yes --no-install-recommends poppler-utils \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --uid 10001 app
 WORKDIR /app
 COPY --from=build --chown=app:app /app/.venv .venv
 COPY pyproject.toml alembic.ini ./

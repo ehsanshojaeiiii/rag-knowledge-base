@@ -41,6 +41,7 @@ New migration: `uv run alembic revision -m "<what changes>"`, then edit `upgrade
 - Type-check with mypy `--strict` (ty is still beta). Format and lint with Ruff.
 - Tests: behaviour over implementation; integration tests use a real Postgres, never mocks of the database.
 - Latest stable versions of dependencies; check the registry, never pin from memory.
+- PDF parsing shells out to poppler `pdftotext` (installed in the Docker image and in CI; `brew install poppler` locally).
 
 ## Skills
 

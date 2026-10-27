@@ -7,21 +7,23 @@ Status is **Accepted** unless marked **Proposed** (to be settled by measurement)
 
 **Context.** The challenge leaves language and tools open and states that solution quality and the reasoning behind
 technical decisions matter more than the number of tools or architectural complexity. The work that is specific to
-this problem is AI and text work: token-aware chunking, Persian text handling, embedding-model evaluation, and
+this problem is AI and text work: structure-aware chunking, Persian text handling, embedding-model evaluation, and
 optionally reranking.
 
-**Decision.** Python 3.13 with FastAPI, as one service.
+**Decision.** Python 3.14 with FastAPI, as one service.
 
-**Why.** Python is where the libraries for that work live and are maintained: Hugging Face `tokenizers` (exact
-token counts for BGE-M3), Persian NLP (`hazm`), information-retrieval metrics, and rerankers if retrieval needs one.
-Embeddings and the LLM are reached over HTTP, so any language could call them; the difference is everything around
-those calls. FastAPI generates the OpenAPI spec and Swagger UI from type hints, which covers a required deliverable
-with no extra code.
+**Why.** Python is where the libraries for that work live and are maintained: text splitters, information-retrieval
+evaluation, Persian NLP, and rerankers if retrieval needs one. Embeddings and the LLM are reached over HTTP, so any
+language could call them; the difference is everything around those calls. FastAPI generates the OpenAPI spec and
+Swagger UI from type hints, which covers a required deliverable with no extra code.
 
 **Alternatives.** Go or TypeScript: equally good at HTTP, Postgres and concurrency, but would mean hand-writing
 the text and evaluation pieces. A Go API plus a Python AI service: two deployables, a network contract between
 them, and the document-version switch spread across two processes — complexity the problem does not need.
-Python 3.14: `hazm` does not support it yet.
+
+**Version.** 3.14 rather than 3.15 (stable since 2026-10-09): measured on 2026-10-28, the project's tests pass on
+3.15, but `pyyaml` and `zstandard` publish no 3.15 wheels yet, so the Docker build would need a C compiler.
+Upgrading is a one-line change once they do.
 
 **Cost.** Python is slower than Go for CPU-bound work; none of this service's hot paths are CPU-bound (they wait
 on the database, the embedding API and the LLM).
@@ -100,3 +102,16 @@ challenge grades (versioned change management, retrieval quality, grounded citat
 in code we neither wrote nor could fully explain. They remain useful as references for patterns such as hybrid
 search and citation formats. In production, the build-or-adopt answer depends on the team: a platform wins when the
 need is a generic chat-with-documents UI; a focused service wins when RAG is embedded in another product's API.
+
+## 8. Persian normalisation without an NLP library
+
+**Decision.** Normalise text with Python's `unicodedata` (NFKC) plus a small character map: Arabic ي/ى/ك → Persian
+ی/ک, Persian and Arabic digits → ASCII, diacritics, tatweel and invisible direction marks removed, half-spaces kept.
+The keyword index treats a half-space as a word break, so `می‌شود` matches `می شود`.
+
+**Why (measured 2026-10-28).** `hazm`'s default normaliser damages technical text: `2.1` → `۲ ٫ ۱`,
+`200,000` → `۲۰۰ , ۰۰۰`, and URLs are split apart. With those rules turned off, what remains is a character map —
+about ten lines — while `hazm` would add `nltk` and `huggingface-hub` and pin Python below 3.14.
+
+**Limitation.** PDFs that split the لا ligature (`اطلاعات` extracted as `اطالعات`) cannot be repaired without a
+dictionary; vector search still matches these words by meaning, keyword search may miss them.
