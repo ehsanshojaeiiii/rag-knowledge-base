@@ -1,11 +1,12 @@
 """Turn an uploaded file into normalised, citable chunks of text."""
 
+import re
 import subprocess
 import unicodedata
 from dataclasses import dataclass
 from pathlib import PurePath
 
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 CHUNK_SIZE = 1200  # characters
 CHUNK_OVERLAP = 150
@@ -23,7 +24,7 @@ _CHARACTER_MAP = str.maketrans(
     | {chr(0x06F0 + d): str(d) for d in range(10)}
     | {chr(0x0660 + d): str(d) for d in range(10)}
 )
-_KEEP_FORMAT_CHARS = {"‌", "‍"}  # half-space (ZWNJ) and ZWJ carry meaning in Persian
+_KEEP_FORMAT_CHARS = {"\u200c", "\u200d"}  # half-space (ZWNJ) and ZWJ carry meaning in Persian
 
 _splitter = RecursiveCharacterTextSplitter(
     chunk_size=CHUNK_SIZE,
@@ -31,9 +32,7 @@ _splitter = RecursiveCharacterTextSplitter(
     separators=["\n\n", "\n", ". ", "؟ ", "? ", "! ", "؛ ", "، ", ", ", " ", ""],
     keep_separator="end",
 )
-_markdown = MarkdownHeaderTextSplitter(
-    headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")], strip_headers=False
-)
+_HEADING = re.compile(r"^(#{1,3})\s+(.+?)\s*#*\s*$")
 
 
 class UnsupportedDocument(ValueError):
@@ -122,7 +121,23 @@ def _pdf_pages(data: bytes) -> list[str]:
 
 
 def _markdown_sections(text: str) -> list[_Part]:
+    """Split Markdown at #, ## and ### headings; each part keeps its heading path as the section.
+
+    Written here rather than using LangChain's MarkdownHeaderTextSplitter, which drops characters
+    that are not "printable" — including the Persian half-space.
+    """
+    sections: list[tuple[list[str], list[str]]] = [([], [])]  # (heading path, lines)
+    in_code_block = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_code_block = not in_code_block
+        heading = None if in_code_block else _HEADING.match(line)
+        if heading:
+            parent = sections[-1][0][: len(heading[1]) - 1]
+            sections.append(([*parent, normalize(heading[2])], []))
+        sections[-1][1].append(line)
     return [
-        (" > ".join(normalize(h) for h in doc.metadata.values()) or None, None, doc.page_content)
-        for doc in _markdown.split_text(text)
+        (" > ".join(path) or None, None, "\n".join(lines))
+        for path, lines in sections
+        if any(line.strip() and not _HEADING.match(line) for line in lines)
     ]

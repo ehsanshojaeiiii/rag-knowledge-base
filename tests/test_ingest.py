@@ -38,13 +38,13 @@ def make_pdf(pages: list[str]) -> bytes:
 
 class TestNormalize:
     def test_unifies_arabic_letters_and_digits(self) -> None:
-        assert normalize("كتاب‌هاي ٣ و ۴") == "کتاب‌های 3 و 4"
+        assert normalize("كتاب\u200cهاي ٣ و ۴") == "کتاب\u200cهای 3 و 4"
 
     def test_removes_diacritics_tatweel_and_direction_marks(self) -> None:
         assert normalize("‫كَتَـــب‬") == "کتب"
 
     def test_keeps_half_space(self) -> None:
-        assert normalize("می‌شود") == "می‌شود"
+        assert normalize("می\u200cشود") == "می\u200cشود"
 
     def test_folds_pdf_ligatures_into_letters(self) -> None:
         assert normalize("ﻻ") == "لا"
@@ -92,6 +92,25 @@ class TestChunk:
         assert all(len(c.content) <= CHUNK_SIZE for c in chunks)
         last_sentence_of_first = chunks[0].content.split(". ")[-1]
         assert last_sentence_of_first in chunks[1].content
+
+    @pytest.mark.parametrize(
+        ("data", "kind"),
+        [
+            ("# پاک\u200cسازی\nپاک\u200cسازی کش".encode(), "text/markdown"),
+            ("پاک\u200cسازی کش".encode(), "text/plain"),
+        ],
+        ids=["markdown", "text"],
+    )
+    def test_half_spaces_survive_chunking(self, data: bytes, kind: str) -> None:
+        """Regression: LangChain's Markdown splitter silently removed every half-space."""
+        for c in chunk(data, kind):
+            assert "\u200c" in c.content
+            assert c.section is None or "\u200c" in c.section
+
+    def test_headings_inside_code_blocks_do_not_start_sections(self) -> None:
+        markdown = b"# Setup\n```bash\n# install\nmake run\n```\n"
+
+        assert [c.section for c in chunk(markdown, "text/markdown")] == ["Setup"]
 
     def test_text_is_normalised(self) -> None:
         assert chunk("كتاب".encode(), "text/plain")[0].content == "کتاب"
