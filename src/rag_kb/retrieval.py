@@ -90,10 +90,14 @@ def search(session: Session, embedder: Embedder, question: str, limit: int = 5) 
 
 
 def keyword_query(question: str) -> str:
-    """An OR query of the question's meaningful words, e.g. `cdn | کش | پاک`.
+    """An AND query of the question's meaningful words, e.g. `cdn & کش & پاک`.
+
+    AND, not OR: an OR query matches nearly every chunk on common domain words and pushed the
+    right chunk down (Recall@5 0.90 → 0.85 in the evaluation). With AND, keyword search adds a
+    result only when every word appears, as with exact names and error codes.
 
     Words are split at anything that is not a letter or digit (including the half-space and `_`),
     the same way Postgres splits the indexed text.
     """
     words = re.findall(r"[^\W_]+", question.lower())
-    return " | ".join(dict.fromkeys(w for w in words if w not in STOPWORDS))
+    return " & ".join(dict.fromkeys(w for w in words if w not in STOPWORDS))

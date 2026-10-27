@@ -104,7 +104,7 @@ class TestOutdatedContentIsNeverRetrieved:
 class TestKeywordQuery:
     def test_drops_common_words_and_splits_like_postgres(self) -> None:
         assert keyword_query("چطور کش CDN را پاک‌سازی کنم؟ ERR_4021") == (
-            "کش | cdn | پاک | سازی | err | 4021"
+            "کش & cdn & پاک & سازی & err & 4021"
         )
 
     def test_a_question_of_only_common_words_has_no_terms(self) -> None:
