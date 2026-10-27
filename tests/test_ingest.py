@@ -43,6 +43,9 @@ class TestNormalize:
     def test_removes_diacritics_tatweel_and_direction_marks(self) -> None:
         assert normalize("‫كَتَـــب‬") == "کتب"
 
+    def test_removes_control_characters_postgres_cannot_store(self) -> None:
+        assert normalize("کش\x00 CDN\x07\n\tپاک") == "کش CDN\n\tپاک"
+
     def test_keeps_half_space(self) -> None:
         assert normalize("می\u200cشود") == "می\u200cشود"
 

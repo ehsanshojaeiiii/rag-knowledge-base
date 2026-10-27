@@ -25,6 +25,7 @@ _CHARACTER_MAP = str.maketrans(
     | {chr(0x0660 + d): str(d) for d in range(10)}
 )
 _KEEP_FORMAT_CHARS = {"\u200c", "\u200d"}  # half-space (ZWNJ) and ZWJ carry meaning in Persian
+_KEEP_CONTROL_CHARS = {"\n", "\r", "\t"}  # other control characters (e.g. NUL) cannot be stored
 
 _splitter = RecursiveCharacterTextSplitter(
     chunk_size=CHUNK_SIZE,
@@ -66,7 +67,8 @@ def normalize(text: str) -> str:
     """Give each character one spelling, so documents and questions match.
 
     NFKC folds presentation forms from PDFs (e.g. the ligature ﻻ) into plain letters. Diacritics
-    and invisible direction marks are dropped; half-spaces are kept.
+    and invisible direction marks are dropped; half-spaces are kept. Control characters other than
+    line breaks and tabs are dropped: they carry no text, and Postgres rejects NUL.
     """
     text = unicodedata.normalize("NFKC", text).translate(_CHARACTER_MAP)
     return "".join(
@@ -74,6 +76,7 @@ def normalize(text: str) -> str:
         for c in text
         if unicodedata.category(c) != "Mn"
         and (unicodedata.category(c) != "Cf" or c in _KEEP_FORMAT_CHARS)
+        and (unicodedata.category(c) != "Cc" or c in _KEEP_CONTROL_CHARS)
     )
 
 
