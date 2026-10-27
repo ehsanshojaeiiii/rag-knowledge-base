@@ -42,8 +42,9 @@ models need `halfvec`. At very large scale a dedicated vector engine may be fast
 
 ## 3. Build the RAG pipeline on small libraries, not a framework
 
-**Decision.** Use the official `openai` SDK for embeddings and chat, SQLAlchemy + `pgvector` for storage and search,
-and `langchain-text-splitters` for chunking. Do not use LangChain's vector stores, LangGraph or LlamaIndex.
+**Decision.** Use the official `openai` SDK for embeddings and chat (its built-in retries cover rate limits and
+timeouts), SQLAlchemy + `pgvector` for storage and search, and `langchain-text-splitters`' recursive splitter for
+chunking. Do not use LangChain's vector stores, LangGraph or LlamaIndex.
 
 **Why.** Each library replaces code we would otherwise write, without taking over the parts the challenge grades.
 `langchain-text-splitters` (stable 1.x) gives structure-aware Markdown splitting with heading metadata — which
@@ -52,6 +53,10 @@ and write path, so the one-transaction version switch (decision 2) would have to
 linear (retrieve → check → generate → verify), so a workflow engine like LangGraph adds nothing.
 
 Checked against the packages and source (2026-10-28):
+- LangChain's `MarkdownHeaderTextSplitter` drops every character Python does not consider printable
+  (`markdown.py`: `filter(str.isprintable, …)`), which includes the Persian half-space — `پاک‌سازی` became
+  `پاکسازی`. Found by an end-to-end upload of a Persian file; heading splitting is now ~20 lines in `ingest.py`,
+  with a regression test.
 - `langchain-postgres` is at 0.0.19 and requires `pgvector<0.4`, conflicting with the current `pgvector` 0.5.
 - LlamaIndex's `update_ref_doc` (`llama-index-core`, `indices/base.py`) deletes the document and then inserts it
   again, re-embedding in between. During that window the document is missing from search, and if the embedding

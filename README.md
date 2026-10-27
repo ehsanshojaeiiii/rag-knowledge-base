@@ -35,3 +35,15 @@ make test                   # tests
 make check                  # lint + type checks + tests (what CI runs)
 make format                 # fix formatting
 ```
+
+## Tests
+
+`make test` runs everything against a throwaway Postgres; the embedding API is replaced by a deterministic fake,
+so tests are fast, free and repeatable. Model quality is measured separately (evaluation), because quality is a
+score, not pass/fail.
+
+| Requirement (from the challenge) | Covered by |
+|---|---|
+| Process text PDF, plain text and Markdown | `tests/test_ingest.py`, `TestDocumentProcessing` |
+| Add, edit, delete; outdated content never used | `TestChangeManagement` — edit leaves only the new version; a failed edit keeps the old one; stale `If-Match` → 409; delete removes every chunk |
+| API access with documented endpoints | `TestApiAccess` |

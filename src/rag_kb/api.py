@@ -1,11 +1,25 @@
-from fastapi import APIRouter, HTTPException, status
+from datetime import datetime
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from rag_kb import documents
+from rag_kb.config import get_settings
 from rag_kb.db import SessionDep
+from rag_kb.embeddings import Embedder, get_embedder
+from rag_kb.models import Document
 
-router = APIRouter(tags=["health"])
+router = APIRouter()
+
+EmbedderDep = Annotated[Embedder, Depends(get_embedder)]
+FileField = Annotated[
+    UploadFile, File(description="PDF (text, not scanned), Markdown or plain text")
+]
+TitleField = Annotated[str | None, Form(description="Defaults to the file name")]
 
 
 class Health(BaseModel):
@@ -13,7 +27,21 @@ class Health(BaseModel):
     pgvector: str
 
 
-@router.get("/health")
+class DocumentOut(BaseModel):
+    id: UUID
+    title: str
+    filename: str
+    media_type: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+    @classmethod
+    def of(cls, document: Document) -> DocumentOut:
+        return cls.model_validate(document, from_attributes=True)
+
+
+@router.get("/health", tags=["health"])
 def health(session: SessionDep) -> Health:
     """Report whether the database is reachable and pgvector is installed."""
     try:
@@ -25,3 +53,67 @@ def health(session: SessionDep) -> Health:
     if version is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "pgvector is not installed")
     return Health(status="ok", pgvector=version)
+
+
+@router.post("/documents", status_code=status.HTTP_201_CREATED, tags=["documents"])
+def create_document(
+    session: SessionDep, embedder: EmbedderDep, file: FileField, title: TitleField = None
+) -> DocumentOut:
+    """Upload a document. It is searchable as soon as this returns."""
+    data = _read(file)
+    return DocumentOut.of(documents.create(session, embedder, _name(file), data, title))
+
+
+@router.get("/documents", tags=["documents"])
+def list_documents(session: SessionDep) -> list[DocumentOut]:
+    return [DocumentOut.of(d) for d in documents.list_all(session)]
+
+
+@router.get("/documents/{document_id}", tags=["documents"])
+def get_document(session: SessionDep, document_id: UUID) -> DocumentOut:
+    return DocumentOut.of(documents.get(session, document_id))
+
+
+@router.put("/documents/{document_id}", tags=["documents"])
+def replace_document(
+    session: SessionDep,
+    embedder: EmbedderDep,
+    document_id: UUID,
+    file: FileField,
+    title: TitleField = None,
+    if_match: Annotated[
+        int | None,
+        Header(description="Expected current version; a mismatch returns 409"),
+    ] = None,
+) -> DocumentOut:
+    """Replace a document's content with a new version.
+
+    Answers keep using the previous version until the new one is fully processed, then switch
+    at once. Uploading identical content does not create a new version.
+    """
+    data = _read(file)
+    return DocumentOut.of(
+        documents.replace(session, embedder, document_id, _name(file), data, title, if_match)
+    )
+
+
+@router.delete(
+    "/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["documents"]
+)
+def delete_document(session: SessionDep, document_id: UUID) -> None:
+    """Delete a document. It is excluded from every answer from this moment on."""
+    documents.remove(session, document_id)
+
+
+def _read(file: UploadFile) -> bytes:
+    limit = get_settings().max_upload_bytes
+    data = file.file.read(limit + 1)
+    if len(data) > limit:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, f"File is larger than {limit} bytes")
+    return data
+
+
+def _name(file: UploadFile) -> str:
+    if not file.filename:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "The upload has no file name")
+    return file.filename

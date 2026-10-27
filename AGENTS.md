@@ -37,7 +37,7 @@ New migration: `uv run alembic revision -m "<what changes>"`, then edit `upgrade
   endpoints unless everything inside is async.
 - Database: SQLAlchemy 2 typed ORM (not SQLModel — pre-1.0, and API schemas stay separate from tables);
   schema changes only through Alembic migrations in `migrations/versions/`.
-- No LangChain vector stores, LangGraph or LlamaIndex (see decision 3). `langchain-text-splitters` is allowed for chunking.
+- No LangChain vector stores, LangGraph or LlamaIndex (decision 3). Only `RecursiveCharacterTextSplitter` from `langchain-text-splitters`; its Markdown splitter drops Persian half-spaces.
 - Type-check with mypy `--strict` (ty is still beta). Format and lint with Ruff.
 - Tests: behaviour over implementation; integration tests use a real Postgres, never mocks of the database.
 - Latest stable versions of dependencies; check the registry, never pin from memory.
