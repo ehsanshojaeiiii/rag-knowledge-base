@@ -47,8 +47,15 @@ and `langchain-text-splitters` for chunking. Do not use LangChain's vector store
 `langchain-text-splitters` (stable 1.x) gives structure-aware Markdown splitting with heading metadata — which
 becomes the citation's section — and recursive splitting with overlap. Framework vector stores own their own tables
 and write path, so the one-transaction version switch (decision 2) would have to work around them; the pipeline is
-linear (retrieve → check → generate → verify), so a workflow engine like LangGraph adds nothing. Measured:
-`langchain-postgres` is at 0.0.19 and requires `pgvector<0.4`, conflicting with the current `pgvector` 0.5.
+linear (retrieve → check → generate → verify), so a workflow engine like LangGraph adds nothing.
+
+Checked against the packages and source (2026-10-28):
+- `langchain-postgres` is at 0.0.19 and requires `pgvector<0.4`, conflicting with the current `pgvector` 0.5.
+- LlamaIndex's `update_ref_doc` (`llama-index-core`, `indices/base.py`) deletes the document and then inserts it
+  again, re-embedding in between. During that window the document is missing from search, and if the embedding
+  call fails the document is gone — the opposite of the version switch this service needs.
+- `llama-index-vector-stores-postgres` 0.9.0 requires `sqlalchemy<2.1` and `psycopg2`; this project uses
+  SQLAlchemy 2.1 and psycopg 3.
 
 ## 4. LLM behind the OpenAI-compatible chat API
 
@@ -83,7 +90,9 @@ text, lowest latency); that is a hypothesis until the evaluation runs.
 (~93k GitHub stars), Dify (~160k), AnythingLLM (~68k), PrivateGPT (~58k), Onyx (~33k), Kotaemon (~26k).
 Frameworks exist too: LangChain, LlamaIndex, Haystack, txtai.
 
-**Decision.** Build a small service, borrowing focused libraries (decision 3), instead of deploying a platform.
+**Decision.** For this challenge, build a small service, borrowing focused libraries (decision 3), instead of
+deploying a platform. A platform such as RAGFlow would be a legitimate production choice for a team that needs a
+ready document-chat product; the challenge asks for the system to be designed and implemented, so it is built here.
 
 **Why.** The platforms are complete products — web UI, user management, connectors, several supporting services —
 so adopting one would mean configuring someone else's system rather than designing one, and the parts the
