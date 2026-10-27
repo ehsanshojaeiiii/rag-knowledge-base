@@ -45,5 +45,6 @@ score, not pass/fail.
 | Requirement (from the challenge) | Covered by |
 |---|---|
 | Process text PDF, plain text and Markdown | `tests/test_ingest.py`, `TestDocumentProcessing` |
-| Add, edit, delete; outdated content never used | `TestChangeManagement` — edit leaves only the new version; a failed edit keeps the old one; stale `If-Match` → 409; delete removes every chunk |
+| Add, edit, delete; outdated content never used | `TestChangeManagement` — edit leaves only the new version; a failed edit keeps the old one; stale `If-Match` → 409; delete removes every chunk. `TestOutdatedContentIsNeverRetrieved` — search ignores old versions even if a stale chunk is left behind |
+| Retrieve the parts related to the question | `TestRelevantRetrieval` — best chunk ranks first, exact identifiers, Persian half-space spellings, citation fields |
 | API access with documented endpoints | `TestApiAccess` |

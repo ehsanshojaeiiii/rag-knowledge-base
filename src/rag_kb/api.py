@@ -3,11 +3,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from rag_kb import documents
+from rag_kb import documents, retrieval
 from rag_kb.config import get_settings
 from rag_kb.db import SessionDep
 from rag_kb.embeddings import Embedder, get_embedder
@@ -39,6 +39,11 @@ class DocumentOut(BaseModel):
     @classmethod
     def of(cls, document: Document) -> DocumentOut:
         return cls.model_validate(document, from_attributes=True)
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    top_k: int = Field(default=5, ge=1, le=20)
 
 
 @router.get("/health", tags=["health"])
@@ -103,6 +108,17 @@ def replace_document(
 def delete_document(session: SessionDep, document_id: UUID) -> None:
     """Delete a document. It is excluded from every answer from this moment on."""
     documents.remove(session, document_id)
+
+
+@router.post("/search", tags=["search"])
+def search(
+    session: SessionDep, embedder: EmbedderDep, request: SearchRequest
+) -> list[retrieval.Hit]:
+    """Return the chunks most relevant to a query, without generating an answer.
+
+    Only the current version of existing documents is searched.
+    """
+    return retrieval.search(session, embedder, request.query, request.top_k)
 
 
 def _read(file: UploadFile) -> bytes:
