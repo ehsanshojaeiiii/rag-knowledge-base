@@ -10,6 +10,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 CHUNK_SIZE = 1200  # characters
 CHUNK_OVERLAP = 150
+PDF_TIMEOUT_SECONDS = 60
 
 MEDIA_TYPES = {
     ".pdf": "application/pdf",
@@ -115,10 +116,12 @@ def _pdf_pages(data: bytes) -> list[str]:
             input=data,
             capture_output=True,
             check=True,
-            timeout=60,
+            timeout=PDF_TIMEOUT_SECONDS,
         )
     except subprocess.CalledProcessError:
         raise UnreadableDocument("The file is not a readable PDF") from None
+    except subprocess.TimeoutExpired:
+        raise UnreadableDocument("The PDF took too long to read") from None
     # pdftotext ends every page with a form feed.
     return result.stdout.decode("utf-8").split("\f")[:-1]
 

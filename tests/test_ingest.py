@@ -1,5 +1,6 @@
 import pytest
 
+from rag_kb import ingest
 from rag_kb.ingest import (
     CHUNK_SIZE,
     UnreadableDocument,
@@ -130,3 +131,8 @@ class TestChunk:
     def test_rejects_unreadable_files(self, data: bytes, kind: str) -> None:
         with pytest.raises(UnreadableDocument):
             chunk(data, kind)
+
+    def test_pdf_that_takes_too_long_is_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ingest, "PDF_TIMEOUT_SECONDS", 0.000001)
+        with pytest.raises(UnreadableDocument, match="too long"):
+            chunk(make_pdf(["First page"]), "application/pdf")
