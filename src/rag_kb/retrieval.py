@@ -28,24 +28,31 @@ STOPWORDS = frozenset(
     "do does did can could should i we you it this that with from by as at".split()
 )
 
+# Each search reads `chunks` directly, so the HNSW and GIN indexes can serve it, and keeps only
+# chunks of the current version through the join. Ranks are numbered after LIMIT, so neither
+# search sorts the whole table.
 _SEARCH = text("""
-    WITH current_chunks AS (
-        SELECT c.id, c.embedding, c.search
-        FROM chunks c
-        JOIN documents d ON d.id = c.document_id AND d.version = c.version
-    ),
-    semantic AS (
-        SELECT id, row_number() OVER (ORDER BY embedding <=> CAST(:embedding AS vector)) AS rank
-        FROM current_chunks
-        ORDER BY embedding <=> CAST(:embedding AS vector)
-        LIMIT :candidates
+    WITH semantic AS (
+        SELECT id, row_number() OVER (ORDER BY distance) AS rank
+        FROM (
+            SELECT c.id, c.embedding <=> CAST(:embedding AS vector) AS distance
+            FROM chunks c
+            JOIN documents d ON d.id = c.document_id AND d.version = c.version
+            ORDER BY distance
+            LIMIT :candidates
+        ) nearest
     ),
     keyword AS (
-        SELECT id, row_number() OVER (ORDER BY ts_rank_cd(search, query) DESC) AS rank
-        FROM current_chunks, to_tsquery('simple', :terms) AS query
-        WHERE :terms <> '' AND search @@ query
-        ORDER BY ts_rank_cd(search, query) DESC
-        LIMIT :candidates
+        SELECT id, row_number() OVER (ORDER BY relevance DESC) AS rank
+        FROM (
+            SELECT c.id, ts_rank_cd(c.search, query) AS relevance
+            FROM chunks c
+            JOIN documents d ON d.id = c.document_id AND d.version = c.version,
+                 to_tsquery('simple', :terms) AS query
+            WHERE :terms <> '' AND c.search @@ query
+            ORDER BY relevance DESC
+            LIMIT :candidates
+        ) matching
     )
     SELECT c.id AS chunk_id, c.document_id, d.title, c.version, c.section, c.page, c.content,
            1 - (c.embedding <=> CAST(:embedding AS vector)) AS similarity,
@@ -76,6 +83,9 @@ class Hit:
 def search(session: Session, embedder: Embedder, question: str, limit: int = 5) -> list[Hit]:
     question = normalize(question)
     [embedding] = embedder.embed([question])
+    # An HNSW index scan finds its nearest rows before the version filter; iterative scanning
+    # (pgvector 0.8) keeps searching until enough current chunks are found, in exact order.
+    session.execute(text("SET LOCAL hnsw.iterative_scan = strict_order"))
     rows = session.execute(
         _SEARCH,
         {
