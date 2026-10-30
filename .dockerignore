@@ -9,3 +9,5 @@ prep
 .ruff_cache
 .pytest_cache
 tests
+data
+compose.override.yaml

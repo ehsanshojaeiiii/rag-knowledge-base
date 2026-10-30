@@ -9,7 +9,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"  # for `make dev`; change if 5432 is taken
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rag -d rag"]
       interval: 2s
