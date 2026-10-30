@@ -40,6 +40,14 @@ updated consistently.
 **Cost.** pgvector's HNSW index supports up to 2,000 dimensions for `vector` and 4,000 for `halfvec`, so 3,072-dim
 models need `halfvec`. At very large scale a dedicated vector engine may be faster; not a concern at this size.
 
+**Indexes, verified with `EXPLAIN ANALYZE`.** Each search reads `chunks` directly (no shared CTE, which Postgres
+would materialise and scan without indexes) and numbers ranks only after `LIMIT`, so neither sorts the whole
+table. On the 1,205-chunk corpus the planner scans vectors exactly (cheaper at this size) and uses the GIN index for
+keywords: 9 ms per search. With full scans priced out, as on a large table, it uses the HNSW index; pgvector 0.8's
+`hnsw.iterative_scan = strict_order` keeps the index searching until enough chunks of current versions are found,
+so the version filter cannot leave a question with too few results. Retrieval quality was identical on both paths
+(Recall@5 0.897).
+
 ## 3. Build the RAG pipeline on small libraries, not a framework
 
 **Decision.** Use the official `openai` SDK for embeddings and chat (its built-in retries cover rate limits and
@@ -83,7 +91,7 @@ a hosted API (ArvanCloud AIaaS, OpenAI) costs per token and would require review
 
 **Why Gemma 4 e4b, QAT build.** The newest open model family that fits a laptop (~6 GB); QAT (quantization-aware
 training) keeps more quality at 4-bit than quantizing afterwards. Measured through the API on 88 questions (decision 6):
-all 20 unanswerable questions refused, 55 of 68 answerable ones answered with a citation to a labelled page.
+all 20 unanswerable questions refused, 56 of 68 answerable ones answered with a citation to a labelled page.
 
 **Thinking off.** Gemma 4 reasons before answering by default: ~690 hidden tokens for a 26-token answer. With
 `reasoning_effort: none` (`LLM_REASONING_EFFORT`, set in `compose.yaml`) the same answer took 2.7 s instead of

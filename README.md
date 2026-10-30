@@ -99,7 +99,7 @@ the first keyword search.
 BGE-M3 is several times faster, fits a standard HNSW index and separates answerable from unanswerable questions as
 well as the larger models; the reasoning and the upgrade path are in [decision 6](docs/decisions.md).
 
-End to end through `/ask`, with Gemma 4 answering: **all 20 unanswerable questions were refused**, and 55 of the 68
+End to end through `/ask`, with Gemma 4 answering: **all 20 unanswerable questions were refused**, and 56 of the 68
 answerable ones were answered with a citation to a labelled page (strict: a correct answer citing a related overview
 page counts as wrong). Gemma 4's "thinking" is turned off (`LLM_REASONING_EFFORT=none`): on the same questions it was
 4–5× slower and not more accurate.
