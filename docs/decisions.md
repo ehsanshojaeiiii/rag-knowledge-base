@@ -42,7 +42,7 @@ models need `halfvec`. At very large scale a dedicated vector engine may be fast
 
 **Indexes, verified with `EXPLAIN ANALYZE`.** Each search reads `chunks` directly (no shared CTE, which Postgres
 would materialise and scan without indexes) and numbers ranks only after `LIMIT`, so neither sorts the whole
-table. On the 1,205-chunk corpus the planner scans vectors exactly (cheaper at this size) and uses the GIN index for
+table. On the evaluation corpus (1,205 chunks with the demo files) the planner scans vectors exactly (cheaper at this size) and uses the GIN index for
 keywords: 9 ms per search. With full scans priced out, as on a large table, it uses the HNSW index; pgvector 0.8's
 `hnsw.iterative_scan = strict_order` keeps the index searching until enough chunks of current versions are found,
 so the version filter cannot leave a question with too few results. Retrieval quality was identical on both paths
@@ -55,8 +55,8 @@ timeouts), SQLAlchemy + `pgvector` for storage and search, and `langchain-text-s
 chunking. Do not use LangChain's vector stores, LangGraph or LlamaIndex.
 
 **Why.** Each library replaces code we would otherwise write, without taking over the parts the challenge grades.
-`langchain-text-splitters` (stable 1.x) gives structure-aware Markdown splitting with heading metadata — which
-becomes the citation's section — and recursive splitting with overlap. Framework vector stores own their own tables
+`langchain-text-splitters` (stable 1.x) gives recursive splitting with overlap at paragraph, line and sentence
+boundaries; Markdown headings — which become the citation's section — are split by our own code (below). Framework vector stores own their own tables
 and write path, so the one-transaction version switch (decision 2) would have to work around them; the pipeline is
 linear (retrieve → check → generate → verify), so a workflow engine like LangGraph adds nothing.
 
@@ -180,7 +180,9 @@ need is a generic chat-with-documents UI; a focused service wins when RAG is emb
 ## 8. Persian normalisation without an NLP library
 
 **Decision.** Normalise text with Python's `unicodedata` (NFKC) plus a small character map: Arabic ي/ى/ك → Persian
-ی/ک, Persian and Arabic digits → ASCII, diacritics, tatweel and invisible direction marks removed, half-spaces kept.
+ی/ک, Persian and Arabic digits → ASCII, diacritics, tatweel and invisible direction marks removed, half-spaces kept,
+and control characters other than line breaks and tabs removed (ArvanCloud's own pages contain NUL bytes, e.g.
+`۲۵\x00۶` for `۲۵۶`, which Postgres cannot store).
 The keyword index treats a half-space as a word break, so `می‌شود` matches `می شود`.
 
 **Why (measured 2026-10-28).** `hazm`'s default normaliser damages technical text: `2.1` → `۲ ٫ ۱`,

@@ -27,6 +27,8 @@ cp .env.example .env        # then set EMBEDDING_API_KEY
 make run                    # build and start Postgres, Ollama and the API
 ```
 
+If port 5432 is already used by another Postgres, set `DB_PORT=5433` in `.env`.
+
 - API: http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
 - OpenAPI spec: http://localhost:8000/openapi.json, also committed as [docs/openapi.json](docs/openapi.json)
@@ -140,6 +142,8 @@ make format                 # fix formatting
 ## Limitations
 
 - Scanned PDFs (images without a text layer) are rejected; OCR is out of scope.
+- Plain-text files have no sections, so their citations point to the document and the quoted chunk; PDFs cite the
+  page, Markdown the heading path. Headings inside PDFs are not detected.
 - PDFs that split the Persian لا ligature during text extraction keep that defect; vector search still matches
   such words by meaning, keyword search may miss them.
 - Uploads are processed synchronously; very large documents would move to a background job in production.
