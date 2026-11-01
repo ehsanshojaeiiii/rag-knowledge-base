@@ -1,7 +1,7 @@
 # Decision records
 
 Short records of the choices that shape this project: the context, the decision, and what it costs.
-Status is **Accepted** unless marked **Proposed** (to be settled by measurement).
+All of them are accepted and implemented.
 
 ## 1. Python, as a single service
 
@@ -116,8 +116,8 @@ The threshold (0.58 for BGE-M3) is calibrated by the evaluation, see decision 6.
 
 **Why (measured on the challenge PDF, page 3).** `pdftotext` kept correct word spacing; `pypdf` merged words
 (`فرضکنیدطراحیو`); PDFium merged words the same way; `pdfplumber` and the pure-Go `ledongthuc/pdf` returned
-reversed Persian text; PyMuPDF was close to poppler but is AGPL-licensed. Poppler's two defects — bidi control
-characters and the split لا ligature (`اطالعات`) — are handled by normalisation.
+reversed Persian text; PyMuPDF was close to poppler but is AGPL-licensed. Poppler leaves two defects: bidi control
+characters, which normalisation removes, and the split لا ligature (`اطالعات`), which it cannot repair (decision 8).
 
 ## 6. Embedding model: `Bge-m3`, refusal threshold 0.58
 

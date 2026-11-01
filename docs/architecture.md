@@ -31,7 +31,7 @@ flowchart LR
 | Chunk | Split into overlapping pieces of up to 1,200 characters; each keeps its document, version, section (Markdown) or page (PDF). |
 | Embed | Turn each chunk into a vector with the chosen embedding model. |
 | Hybrid search | Vector similarity + keyword match (all words must match), fused by rank (RRF), over **current versions only**. |
-| Evidence check | If the best match is too weak, answer "not enough information" without calling the LLM. |
+| Evidence check | Drop hits below the similarity threshold; if none is left, answer "not enough information" without calling the LLM. |
 | Generate | The LLM answers only from numbered sources and cites them as `[n]`. |
 | Verify | Every `[n]` must be a source we sent; an answer with no valid citation becomes "not enough information". |
 

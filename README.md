@@ -147,3 +147,6 @@ make format                 # fix formatting
 - PDFs that split the Persian لا ligature during text extraction keep that defect; vector search still matches
   such words by meaning, keyword search may miss them.
 - Uploads are processed synchronously; very large documents would move to a background job in production.
+- `POST /documents` always creates a new document, so uploading the same file twice stores it twice; new versions
+  of a document go through `PUT`.
+- No authentication: the API is meant to run behind a gateway that provides it.
