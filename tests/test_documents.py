@@ -137,6 +137,28 @@ class TestChangeManagement:
         assert response.status_code == 409
         assert stored(db, doc["id"]) == [(2, "Version two")]
 
+    def test_edit_that_another_edit_overtakes_while_embedding_is_rejected(
+        self,
+        client: TestClient,
+        db: Session,
+        embedder: FakeEmbedder,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        doc = upload(client, "plan.md", b"Version one")
+        embed = embedder.embed
+
+        def other_edit_lands_first(texts: list[str]) -> list[list[float]]:
+            monkeypatch.setattr(embedder, "embed", embed)
+            assert replace(client, doc["id"], "plan.md", b"Their edit").is_success
+            return embed(texts)
+
+        monkeypatch.setattr(embedder, "embed", other_edit_lands_first)
+
+        response = replace(client, doc["id"], "plan.md", b"My edit")
+
+        assert response.status_code == 409
+        assert stored(db, doc["id"]) == [(2, "Their edit")]
+
     def test_failed_edit_keeps_the_previous_version_searchable(
         self, client: TestClient, db: Session, embedder: FakeEmbedder
     ) -> None:
