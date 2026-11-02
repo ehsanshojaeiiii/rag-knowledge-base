@@ -8,9 +8,14 @@ A question is answered correctly when one of the top 5 chunks comes from a page 
 answering it — the same 5 chunks the answer step gives the language model. The Persian and English
 versions of a page count as the same page. Unanswerable questions have no pages and are used to
 calibrate the similarity threshold below which the service says there is not enough information.
+
+`questions-holdout.jsonl` was written after the system was tuned on `questions.jsonl`: more English,
+English questions about Persian-only pages, casual spelling, and near misses. It checks that the
+tuning generalises instead of fitting the first set.
 """
 
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -26,10 +31,11 @@ from rag_kb.ingest import chunk
 
 CORPUS = Path("data/arvan-docs")
 CACHE = Path("data/eval-cache")
-QUESTIONS = Path("eval/questions.jsonl")
+# EVAL_QUESTIONS=eval/questions-holdout.jsonl scores the held-out set, written after tuning.
+QUESTIONS = Path(os.environ.get("EVAL_QUESTIONS", "eval/questions.jsonl"))
 MODELS = ["Bge-m3", "Embedding-3-Small", "Embedding-3-Large", "Gemini-embedding-001"]
 TOP_K = 5
-API = "http://localhost:8000"
+API = os.environ.get("RAG_API", "http://localhost:8000")
 
 
 @dataclass

@@ -1,0 +1,26 @@
+{"q": "How do I top up my ArvanCloud wallet automatically from my bank account?", "pages": ["accounts/wallet/direct-debit"]}
+{"q": "How can I deposit money into my ArvanCloud account?", "pages": ["accounts/wallet/direct-debit", "accounts/wallet/coupon"]}
+{"q": "How can I automatically copy the objects of one bucket into another bucket for backup?", "pages": ["object-storage/buckets/replication"]}
+{"q": "Can I run SQL queries directly on the files stored in my object storage?", "pages": ["object-storage/query-engine"]}
+{"q": "How do I apply one firewall rule to several of my domains at once?", "pages": ["cdn/security/account-firewall"]}
+{"q": "How do I change my name or contact details in my ArvanCloud profile?", "pages": ["accounts/modify"]}
+{"q": "How do I give a teammate access to only the AI service resources?", "pages": ["aiaas/iam"]}
+{"q": "Can the CDN add or rewrite HTTP response headers such as Access-Control-Allow-Origin?", "pages": ["cdn/transform-rules"]}
+{"q": "How do I host files for public download from object storage with CDN caching?", "pages": ["object-storage/download-bucket"]}
+{"q": "Which plans include the Access Point feature of object storage?", "pages": ["object-storage/access-point"]}
+{"q": "Distribute my traffic between servers by weight and location using DNS", "pages": ["cdn/dns-records/dns-loadbalancer", "cdn/dns-records/dns-loadbalance"]}
+{"q": "How do I send my CDN access logs to my own log server?", "pages": ["cdn/analytics/log-forwarding", "cdn/analytics/logging"]}
+{"q": "Upload my own SSL certificate and private key to ArvanCloud", "pages": ["cdn/https-settings/private-cert", "cdn/https-settings/custom-certificate"]}
+{"q": "Where can I see who changed settings in the CDN panel?", "pages": ["cdn/audit-log"]}
+{"q": "How do I build my own app for the ArvanCloud CDN marketplace?", "pages": ["cdn/marketplace/develop"]}
+{"q": "How do I edit a DNS record I already created?", "pages": ["cdn/dns-records/editing-records"]}
+{"q": "cdn چیه؟؟ چطوری برای سایتم فعالش کنم", "pages": ["cdn", "cdn/domain"]}
+{"q": "dns record رو چجوری ادیت کنم", "pages": ["cdn/dns-records/editing-records"]}
+{"q": "شتاب دهی صندوقچه رو چطوری روشن کنم", "pages": ["object-storage/buckets/acceleration"]}
+{"q": "دیتا کاتالوگ تو فضای ابری چیه", "pages": ["object-storage/data-catalog"]}
+{"q": "تو پیشخان پنل آروان چه چیزایی میبینم", "pages": ["accounts/dashboard"]}
+{"q": "Does ArvanCloud CDN support HTTP/3 and QUIC?", "pages": []}
+{"q": "How much does ArvanCloud object storage cost per GB per month?", "pages": []}
+{"q": "How do I mount ArvanCloud object storage as a persistent volume in Kubernetes?", "pages": []}
+{"q": "چطور یک ماشین مجازی لینوکسی در آروان بسازم؟", "pages": []}
+{"q": "حداکثر چند دامنه رو می‌تونم توی پلن رایگان CDN اضافه کنم؟", "pages": []}
