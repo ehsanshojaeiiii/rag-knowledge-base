@@ -177,7 +177,8 @@ def search(
 ) -> list[retrieval.Hit]:
     """Return the chunks most relevant to a query, without generating an answer.
 
-    Only the current version of existing documents is searched.
+    Only the current version of existing documents is searched. The query is searched as
+    given; `/ask` also searches its translation into the other document language.
     """
     return retrieval.search(session, embedder, request.query, request.top_k)
 

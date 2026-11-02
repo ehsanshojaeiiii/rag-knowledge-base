@@ -105,10 +105,9 @@ class Answer:
 
 
 def answer(session: Session, embedder: Embedder, llm: LLM, question: str, top_k: int = 5) -> Answer:
-    hits = retrieval.search(session, embedder, question, top_k, translate(llm, question))
-    if not hits or max(h.similarity for h in hits) < get_settings().min_similarity:
+    evidence = retrieval.search(session, embedder, question, top_k, translate(llm, question))
+    if not evidence or max(h.similarity for h in evidence) < get_settings().min_similarity:
         return _insufficient()
-    evidence = hits
 
     reply = llm.complete(SYSTEM_PROMPT, build_prompt(question, evidence)).strip()
     cited = cited_sources(reply, len(evidence))

@@ -91,7 +91,8 @@ a hosted API (ArvanCloud AIaaS, OpenAI) costs per token and would require review
 
 **Why Gemma 4 e4b, QAT build.** The newest open model family that fits a laptop (~6 GB); QAT (quantization-aware
 training) keeps more quality at 4-bit than quantizing afterwards. Measured through the API on 88 questions (decision 6):
-all 20 unanswerable questions refused, 57 of 68 answerable ones answered with a citation to a labelled page.
+all 20 unanswerable questions refused, 61 of 68 answerable ones answered with a citation to a labelled page (57 before
+the search improvements of decision 10). Gemma 4 12B was measured too and rejected (decision 10).
 
 **Thinking off.** Gemma 4 reasons before answering by default: ~690 hidden tokens for a 26-token answer. With
 `reasoning_effort: none` (`LLM_REASONING_EFFORT`, set in `compose.yaml`) the same answer took 2.7 s instead of
@@ -240,7 +241,8 @@ questions were answered and all 20 unanswerable ones were still refused. Afterwa
 | Embed each chunk with its title and section path | 58 | 20 | A chunk cut from "Object storage > Lifecycle" no longer loses that context. Recall@1 0.63 → 0.68, MRR 0.75 → 0.77, best threshold 0.588 → 0.583 (0.58 still refuses no answerable question). |
 | Also search the question translated into the other language, fusing both rankings | **61** | **20** | English questions reach Persian-only pages and the reverse; Bge-m3 alone scores them lower. One extra short LLM call per question. |
 
-Held-out set: 19 of 22 answered, 4 of 4 refused; the same with and without translation, so its gain on the main set
+Documents stored before the title-and-section change keep their earlier embeddings until they are uploaded
+again; a fresh installation has none. Held-out set: 19 of 22 answered, 4 of 4 refused; the same with and without translation, so its gain on the main set
 is real but smaller than on questions written to test it.
 
 **Rejected after measuring.**

@@ -69,7 +69,8 @@ its chunks go with it in the same transaction (`ON DELETE CASCADE`), so it is ex
 | `ingest.py` | File → normalised chunks with section or page (no database, no network) |
 | `embeddings.py` | Text → vectors through any OpenAI-compatible embeddings API, batched, with retries |
 | `documents.py` | Create, replace and delete documents; the one-transaction version switch |
-| `retrieval.py` | Hybrid search SQL (vector + keyword, current versions only) and rank fusion |
-| `answering.py` | Evidence gate, prompt, LLM call, citation and number check, quotes |
+| `retrieval.py` | Hybrid search SQL (vector + keyword, current versions only) and rank fusion, also across the question and its translation |
+| `answering.py` | Question translation, evidence gate, prompt, LLM call, citation and number check, quotes |
 | `api.py`, `main.py` | HTTP endpoints, request validation, domain errors → HTTP status codes |
+| `ui/index.html` | The question page at `/`: plain HTML and JavaScript over the API, no build step |
 | `config.py`, `db.py`, `models.py` | Settings from the environment, database session, tables |

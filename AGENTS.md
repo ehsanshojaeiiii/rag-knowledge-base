@@ -17,6 +17,7 @@ make dev        # local API with auto-reload (Postgres in Docker, migrations app
 make check      # lint + mypy --strict + tests — run before every commit; CI runs the same
 make format     # fix formatting
 make run        # full stack in Docker
+make run-gpu    # same, model in Docker Model Runner (Apple GPU on a Mac)
 ```
 
 New migration: `uv run alembic revision -m "<what changes>"`, then edit `upgrade()` and `downgrade()`.

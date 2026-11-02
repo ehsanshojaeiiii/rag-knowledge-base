@@ -359,7 +359,7 @@
           "search"
         ],
         "summary": "Search",
-        "description": "Return the chunks most relevant to a query, without generating an answer.\n\nOnly the current version of existing documents is searched.",
+        "description": "Return the chunks most relevant to a query, without generating an answer.\n\nOnly the current version of existing documents is searched. The query is searched as\ngiven; `/ask` also searches its translation into the other document language.",
         "operationId": "search_search_post",
         "requestBody": {
           "content": {
