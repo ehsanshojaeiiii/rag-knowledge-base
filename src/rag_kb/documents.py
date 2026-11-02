@@ -28,9 +28,10 @@ def create(
     session: Session, embedder: Embedder, filename: str, data: bytes, title: str | None
 ) -> Document:
     kind = media_type(filename)
-    chunks = _embed(embedder, chunk(data, kind))
+    title = title or PurePath(filename).stem
+    chunks = _embed(embedder, chunk(data, kind), title)
     document = Document(
-        title=title or PurePath(filename).stem,
+        title=title,
         filename=filename,
         media_type=kind,
         content_hash=_hash(data),
@@ -62,9 +63,10 @@ def replace(
         return current
 
     read_version = current.version
+    title = title or current.title
     session.rollback()  # end the read transaction before the slow part
     kind = media_type(filename)
-    chunks = _embed(embedder, chunk(data, kind))
+    chunks = _embed(embedder, chunk(data, kind), title)
 
     new_version = read_version + 1
     values: dict[str, object] = {
@@ -115,8 +117,13 @@ def list_all(session: Session) -> list[Document]:
     return list(session.scalars(select(Document).order_by(Document.created_at.desc())))
 
 
-def _embed(embedder: Embedder, chunks: list[TextChunk]) -> list[tuple[TextChunk, list[float]]]:
-    return list(zip(chunks, embedder.embed([c.content for c in chunks]), strict=True))
+def _embed(
+    embedder: Embedder, chunks: list[TextChunk], title: str
+) -> list[tuple[TextChunk, list[float]]]:
+    # The title and section go into the embedded text only, so a chunk keeps the context it was
+    # cut from ("Object storage > Lifecycle") while the stored and quoted text stays the chunk.
+    texts = ["\n".join(filter(None, (title, c.section, c.content))) for c in chunks]
+    return list(zip(chunks, embedder.embed(texts), strict=True))
 
 
 def _rows(

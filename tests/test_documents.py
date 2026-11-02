@@ -70,6 +70,16 @@ class TestDocumentProcessing:
         ]
         assert db.scalars(select(Chunk.page).where(Chunk.document_id == pdf["id"])).all() == [1, 2]
 
+    def test_chunks_are_embedded_with_their_title_and_section(
+        self, client: TestClient, db: Session
+    ) -> None:
+        doc = upload(client, "cdn.md", b"# CDN\n## Cache\nPurge the cache.", title="Guide")
+
+        [chunk] = db.scalars(select(Chunk).where(Chunk.document_id == doc["id"])).all()
+        assert "Guide" not in chunk.content  # quotes stay the document's own text
+        expected = FakeEmbedder._vector(f"Guide\nCDN > Cache\n{chunk.content}")
+        assert list(chunk.embedding) == pytest.approx(expected)
+
     def test_title_defaults_to_file_name(self, client: TestClient) -> None:
         assert upload(client, "pricing.md", b"Prices")["title"] == "pricing"
         assert upload(client, "a.md", b"Prices", title="Price list")["title"] == "Price list"
