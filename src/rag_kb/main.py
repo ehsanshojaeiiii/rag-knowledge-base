@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
@@ -16,6 +18,8 @@ app = FastAPI(
     ),
 )
 app.include_router(api.router)
+# A single page to ask questions and manage documents; the API stays usable on its own.
+app.frontend("/", directory=Path(__file__).parent / "ui")
 
 _ERROR_STATUS = {
     DocumentNotFound: status.HTTP_404_NOT_FOUND,

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge Base Q&amp;A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --text: #1d2330; --muted: #677085; --border: #e1e4ea;
+    --accent: #2f6fed; --ok: #1b8a5a; --ok-bg: #e6f5ed; --warn: #a1620a; --warn-bg: #fdf3e2;
+    --code-bg: #f0f2f5; --quote: #f3f6fd; --error: #d14343;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --panel: #1b1f27; --text: #e6e9ef; --muted: #98a1b3; --border: #2c3240;
+      --accent: #6b9bff; --ok: #4cc38a; --ok-bg: #173226; --warn: #f0b35a; --warn-bg: #352812;
+      --code-bg: #232835; --quote: #1f2738; --error: #ff7b7b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.7 "Vazirmatn", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header { padding: 20px 24px 8px; max-width: 1180px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  header a { color: var(--accent); }
+  main {
+    display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px;
+    max-width: 1180px; margin: 0 auto; padding: 12px 24px 40px;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px 32px; } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  textarea {
+    width: 100%; min-height: 76px; resize: vertical; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit;
+  }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  button, .button {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 8px;
+    padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 8px 18px; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .hint { color: var(--muted); font-size: 12px; }
+  .examples button { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+  .badge.answered { color: var(--ok); background: var(--ok-bg); }
+  .badge.insufficient_information { color: var(--warn); background: var(--warn-bg); }
+  #result { margin-top: 16px; }
+  .answer { margin-top: 10px; overflow-wrap: anywhere; }
+  .answer p { margin: 0 0 10px; }
+  .answer ul { margin: 0 0 10px; padding-inline-start: 22px; }
+  .answer pre {
+    direction: ltr; text-align: left; background: var(--code-bg); padding: 10px 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+  }
+  .answer code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .answer pre code { background: none; padding: 0; }
+  .answer a, .cite a { color: var(--accent); }
+  .ref {
+    display: inline-block; min-width: 18px; padding: 0 5px; margin: 0 1px; border-radius: 5px;
+    background: var(--quote); color: var(--accent); font-size: 11px; font-weight: 600; text-align: center;
+    cursor: pointer; vertical-align: 2px; line-height: 17px; direction: ltr;
+  }
+  h2 { font-size: 14px; margin: 18px 0 8px; color: var(--muted); font-weight: 600; }
+  .cite { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .cite.flash { outline: 2px solid var(--accent); }
+  .cite .meta { font-size: 12px; color: var(--muted); }
+  .cite .meta b { color: var(--text); }
+  .cite blockquote {
+    margin: 6px 0 0; padding: 6px 10px; background: var(--quote); border-radius: 6px; font-size: 13.5px;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .cite details { margin-top: 6px; font-size: 12px; }
+  .cite details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 12.5px; }
+  .docs { list-style: none; padding: 0; margin: 10px 0 0; max-height: 70vh; overflow-y: auto; }
+  .docs li { padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .docs .name { overflow-wrap: anywhere; }
+  .docs .actions { display: flex; gap: 6px; margin-top: 4px; }
+  .docs .actions button, .docs .actions .button { font-size: 11px; padding: 2px 8px; }
+  .error { color: var(--error); font-size: 13px; margin-top: 8px; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Knowledge Base Q&amp;A</h1>
+  <p>Answers come only from the uploaded documents, with citations. Persian and English.
+     API: <a href="/docs">Swagger UI</a></p>
+</header>
+<main>
+  <section>
+    <div class="panel">
+      <textarea id="question" dir="auto" placeholder="Ask a question… / سؤال خود را بپرسید…"></textarea>
+      <div class="row">
+        <button class="primary" id="ask">Ask</button>
+        <span class="hint">Ctrl / ⌘ + Enter</span>
+        <span class="hint" id="timing"></span>
+      </div>
+      <div class="row examples" id="examples"></div>
+      <div id="result"></div>
+    </div>
+  </section>
+  <aside class="panel">
+    <div class="row" style="margin-top: 0; justify-content: space-between;">
+      <strong>Documents <span class="hint" id="count"></span></strong>
+      <label class="button">Upload<input type="file" id="upload" accept=".pdf,.md,.markdown,.txt"></label>
+    </div>
+    <div class="hint">PDF (text), Markdown or plain text. “New version” replaces a document; old versions are never used.</div>
+    <div class="error" id="docError"></div>
+    <ul class="docs" id="docs"></ul>
+  </aside>
+</main>
+<script>
+// Every piece of text from the API is inserted with textContent, never parsed as HTML, so a
+// document cannot inject markup or script into this page.
+const $ = (id) => document.getElementById(id);
+const EXAMPLES = [
+  "چطور کش CDN رو پاک کنم؟",
+  "How do I whitelist ArvanCloud IPs on my server firewall?",
+  "رمز عبورم یادم رفته، چطور دوباره وارد پنل بشم؟",
+  "Who won the 2022 FIFA World Cup?",
+];
+
+function el(tag, attributes = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attributes)) {
+    if (name === "class") node.className = value;
+    else node.setAttribute(name, value);
+  }
+  node.append(...children.filter((child) => child !== null && child !== undefined));
+  return node;
+}
+
+const ref = (n) => el("span", {class: "ref", "data-ref": n}, n);
+
+const LINK = /^\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)$/;
+
+// Inline Markdown subset: `code`, **bold**, [links](https://…) and [n] citation markers.
+function inline(text) {
+  return text.split(/(`[^`\n]+`|\*\*[^*\n]+\*\*|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\)|\[\d+\])/).filter(Boolean).map((part) => {
+    if (/^`.+`$/.test(part)) return el("code", {}, part.slice(1, -1));
+    if (/^\*\*.+\*\*$/.test(part)) return el("b", {}, part.slice(2, -2));
+    const link = part.match(LINK);
+    if (link) return el("a", {href: link[2], target: "_blank", rel: "noopener noreferrer"}, link[1]);
+    if (/^\[\d+\]$/.test(part)) return ref(part.slice(1, -1));
+    return document.createTextNode(part);
+  });
+}
+
+const LIST_ITEM = /^\s*(?:[*-]|\d+\.)\s+/;
+
+// Block Markdown subset: fenced code, bullet lists and paragraphs.
+function render(markdown) {
+  const answer = el("div", {class: "answer"});
+  markdown.split(/```[^\n]*\n([\s\S]*?)```/).forEach((segment, index) => {
+    if (index % 2) {
+      answer.append(el("pre", {}, el("code", {}, segment.replace(/\n$/, ""))));
+      return;
+    }
+    for (const block of segment.split(/\n{2,}/)) {
+      let paragraph = null;
+      let list = null;
+      for (const line of block.split("\n").map((l) => l.trim()).filter(Boolean)) {
+        if (LIST_ITEM.test(line)) {
+          paragraph = null;
+          list ??= answer.appendChild(el("ul", {dir: "auto"}));
+          list.append(el("li", {}, ...inline(line.replace(LIST_ITEM, ""))));
+        } else {
+          list = null;
+          if (paragraph) paragraph.append(el("br"));
+          paragraph ??= answer.appendChild(el("p", {dir: "auto"}));
+          paragraph.append(...inline(line));
+        }
+      }
+    }
+  });
+  return answer;
+}
+
+function citation(c) {
+  // <bdi> keeps a Persian section path in its own reading order inside the English line.
+  const where = [`v${c.version}`, c.section, c.page ? `page ${c.page}` : null].filter(Boolean);
+  return el("div", {class: "cite", id: `cite-${c.source}`},
+    el("div", {class: "meta"}, ref(c.source), " ", el("b", {}, c.title),
+      ...where.flatMap((part) => [" · ", el("bdi", {}, String(part))])),
+    el("blockquote", {dir: "auto"}, ...inline(c.quote.replace(LIST_ITEM, ""))),
+    el("details", {}, el("summary", {}, "Whole retrieved chunk"), el("pre", {dir: "auto"}, c.content)));
+}
+
+async function call(method, path, body, headers = {}) {
+  const response = await fetch(path, {method, body, headers});
+  const data = response.status === 204 ? null : await response.json();
+  if (!response.ok) {
+    const detail = Array.isArray(data?.detail) ? data.detail.map((d) => d.msg).join("; ") : data?.detail;
+    throw new Error(`${response.status}: ${detail || response.statusText}`);
+  }
+  return data;
+}
+
+async function ask() {
+  const question = $("question").value.trim();
+  if (!question) return;
+  $("ask").disabled = true;
+  $("timing").textContent = "";
+  $("result").replaceChildren(el("p", {class: "hint"}, "Searching the documents and writing an answer…"));
+  const started = performance.now();
+  try {
+    const result = await call("POST", "/ask", JSON.stringify({question}), {"Content-Type": "application/json"});
+    $("timing").textContent = `${((performance.now() - started) / 1000).toFixed(1)} s`;
+    const label = result.status === "answered" ? "Answered" : "Not enough information";
+    $("result").replaceChildren(
+      el("span", {class: `badge ${result.status}`}, label),
+      render(result.answer),
+      ...(result.citations.length ? [el("h2", {}, "Sources"), ...result.citations.map(citation)] : []));
+  } catch (error) {
+    $("result").replaceChildren(el("div", {class: "error"}, error.message));
+  } finally {
+    $("ask").disabled = false;
+  }
+}
+
+$("result").addEventListener("click", (event) => {
+  const marker = event.target.closest(".answer .ref");
+  const card = marker && $(`cite-${marker.dataset.ref}`);
+  if (!card) return;
+  card.scrollIntoView({behavior: "smooth", block: "center"});
+  card.classList.add("flash");
+  setTimeout(() => card.classList.remove("flash"), 1200);
+});
+
+const fileInput = (className) => el("input", {type: "file", class: className, accept: ".pdf,.md,.markdown,.txt"});
+
+async function loadDocuments() {
+  try {
+    const docs = await call("GET", "/documents");
+    $("count").textContent = `(${docs.length})`;
+    $("docs").replaceChildren(...docs.map((d) => el("li", {"data-id": d.id, "data-version": d.version, "data-title": d.title},
+      el("div", {class: "name", dir: "auto"}, d.title),
+      el("div", {class: "hint"}, `${d.filename} · v${d.version}`),
+      el("div", {class: "actions"},
+        el("label", {class: "button"}, "New version", fileInput("replace")),
+        el("button", {class: "delete"}, "Delete")))));
+  } catch (error) {
+    $("docError").textContent = error.message;
+  }
+}
+
+async function send(method, path, file, headers) {
+  const form = new FormData();
+  form.append("file", file);
+  $("docError").textContent = `Uploading ${file.name}…`;
+  try {
+    await call(method, path, form, headers);
+    $("docError").textContent = "";
+  } catch (error) {
+    $("docError").textContent = error.message;
+  }
+  loadDocuments();
+}
+
+$("upload").addEventListener("change", (event) => {
+  const [file] = event.target.files;
+  if (file) send("POST", "/documents", file);
+  event.target.value = "";
+});
+
+$("docs").addEventListener("change", (event) => {
+  const item = event.target.closest("li");
+  const [file] = event.target.files;
+  if (item && file) send("PUT", `/documents/${item.dataset.id}`, file, {"If-Match": item.dataset.version});
+});
+
+$("docs").addEventListener("click", async (event) => {
+  const item = event.target.closest("li");
+  if (!item || !event.target.classList.contains("delete")) return;
+  if (!confirm(`Delete "${item.dataset.title}"?`)) return;
+  try {
+    await call("DELETE", `/documents/${item.dataset.id}`);
+  } catch (error) {
+    $("docError").textContent = error.message;
+  }
+  loadDocuments();
+});
+
+$("ask").addEventListener("click", ask);
+$("question").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) ask();
+});
+$("examples").replaceChildren(...EXAMPLES.map((q) => el("button", {dir: "auto"}, q)));
+$("examples").addEventListener("click", (event) => {
+  if (event.target.tagName !== "BUTTON") return;
+  $("question").value = event.target.textContent;
+  ask();
+});
+loadDocuments();
+</script>
+</body>
+</html>
