@@ -18,9 +18,10 @@ make run-gpu                # or: the model in Docker Model Runner, which uses t
 ```
 
 Docker containers on macOS cannot reach the Apple GPU; [Docker Model Runner](https://docs.docker.com/ai/model-runner/)
-(Docker Desktop 4.40+, or the `docker-model-plugin` on Linux) runs the model on the host's GPU while Compose still
-declares it ([compose.gpu.yaml](compose.gpu.yaml)). On Linux with an NVIDIA GPU, `make run` can instead give the
-`ollama` service the GPU (Compose `deploy.resources.reservations.devices`).
+runs the model on the host's GPU while Compose still declares it ([compose.gpu.yaml](compose.gpu.yaml)). It needs
+Docker Compose 2.38+ and Model Runner enabled (Docker Desktop: Settings → AI; Linux: the `docker-model-plugin`
+package). Its first start downloads `ai/gemma4:e4b` (~6 GB). On Linux with an NVIDIA GPU, `make run` can instead give
+the `ollama` service the GPU (Compose `deploy.resources.reservations.devices`).
 
 If port 5432 is already used by another Postgres, set `DB_PORT=5433` in `.env`.
 
@@ -110,7 +111,7 @@ well as the larger models; the reasoning and the upgrade path are in [decision 6
 End to end through `/ask`, with Gemma 4 answering: **all 20 unanswerable questions were refused**, and **61 of the
 68** answerable ones were answered with a citation to a labelled page (strict: a correct answer citing a related
 overview page counts as wrong). Each improvement was kept only when this number rose
-([decision 9](docs/decisions.md)):
+([decision 10](docs/decisions.md)):
 
 | Change (measured 2026-11-02) | Answered (of 68) | Refused (of 20) |
 |---|---|---|
@@ -122,7 +123,8 @@ overview page counts as wrong). Each improvement was kept only when this number 
 A second set, [eval/questions-holdout.jsonl](eval/questions-holdout.jsonl), was written after this tuning — more
 English, English questions about Persian-only pages, casual spelling, near misses — to check that it generalises:
 **19 of 22 answered, 4 of 4 refused.** Gemma 4's "thinking" is turned off (`LLM_REASONING_EFFORT=none`): on the same
-questions it was 4–5× slower and not more accurate; Gemma 4 12B was 2–3× slower on a 24 GB laptop.
+questions it was 4–5× slower and not more accurate. Gemma 4 12B took 12–17 s per answer, about 3× e4b, on a laptop
+with 24 GB.
 
 ```bash
 uv run --group eval python eval/fetch_arvan_docs.py     # download the corpus (not committed)
@@ -140,16 +142,25 @@ uv run --group eval python eval/fetch_arvan_docs.py https://docs.arvancloud.ir/e
 
 ## Tests
 
-`make test` runs everything against a throwaway Postgres; the embedding API and the LLM are replaced by
-deterministic fakes, so tests are fast, free and repeatable.
+Two kinds:
+
+- `make test` (and CI): every requirement against a throwaway Postgres with pgvector — real SQL, migrations and
+  transactions — while the embedding API and the LLM are replaced by deterministic fakes, so the tests are fast,
+  free and repeatable.
+- `make test-live` ([tests/test_live.py](tests/test_live.py)): real scenarios against the running stack, nothing
+  faked — real embeddings, real LLM, real HTTP. Upload → answer with section citation → edit → new answer, old one
+  gone → stale edit 409 → delete → refused; a Persian question answered from an English document; a PDF answer citing
+  its page; instructions inside a document ignored; an off-topic question refused; an unsupported file 415. The facts
+  are invented ("Zelora"), so an answer can only come from the uploaded document. Needs the API key and
+  `make run` or `make run-gpu` first; skipped otherwise. Takes about a minute.
 
 | Requirement (from the challenge) | Covered by |
 |---|---|
-| Process text PDF, plain text and Markdown | `tests/test_ingest.py`, `TestDocumentProcessing` |
+| Process text PDF, plain text and Markdown | `tests/test_ingest.py`, `TestDocumentProcessing` — including each chunk embedded with its document title and section |
 | Add, edit, delete; outdated content never used | `TestChangeManagement` — edit leaves only the new version; a failed edit keeps the old one; stale `If-Match` → 409; an edit overtaken by another while embedding → 409; delete removes every chunk. `TestOutdatedContentIsNeverRetrieved` — search ignores old versions even if a stale chunk is left behind |
-| Retrieve the parts related to the question | `TestRelevantRetrieval` — best chunk ranks first, exact identifiers, Persian half-space spellings, citation fields; chunks are embedded with their title and section; a translated question reaches a page in the other language |
-| Answer only from retrieved content, with traceable citations | `TestGroundedAnswers` — cites document, version and section; the model sees only retrieved sources; document text cannot break out of its source tag; answers without valid citations are withheld; an answer stating a number its source does not contain is withheld; each citation quotes the supporting sentence, never a heading |
-| Say clearly when information is missing | `TestNotEnoughInformation` — unrelated questions are refused without calling the model; model refusals are reported |
+| Retrieve the parts related to the question | `TestRelevantRetrieval` — best chunk ranks first, exact identifiers, Persian half-space spellings, citation fields. `TestGroundedAnswers` — a question translated into the other language reaches a page that exists only in that language |
+| Answer only from retrieved content, with traceable citations | `TestGroundedAnswers` — cites document, version and section; once one source clears the threshold the model sees all retrieved sources, and only those; document text cannot break out of its source tag; answers without valid citations are withheld; an answer stating a number its source does not contain is withheld; each citation quotes the supporting sentence, never a heading |
+| Say clearly when information is missing | `TestNotEnoughInformation` — unrelated questions are refused without calling the model and without pointers; model refusals are reported, with related pages as pointers, never as an answer |
 | Answers follow document changes | `TestAnswersFollowDocumentChanges` — after an edit only the new version reaches the model; after a delete the question is refused |
 | API access with documented endpoints | `TestApiAccess`, `tests/test_openapi.py` (the committed spec matches the code), `tests/test_ui.py` (the page is served and never parses API text as HTML) |
 
@@ -159,7 +170,8 @@ Requirements: [uv](https://docs.astral.sh/uv/) and Docker.
 
 ```bash
 make dev                    # local API with auto-reload; Postgres and Ollama in Docker
-make test                   # tests
+make test                   # tests (fast, with fakes for the embedding API and the LLM)
+make test-live              # real scenarios against the running stack (after make run or make run-gpu)
 make check                  # lint + type checks + tests (what CI runs)
 make format                 # fix formatting
 ```
@@ -173,9 +185,11 @@ make format                 # fix formatting
   cited source; it does not verify that the wording of each sentence is supported (that needs an NLI or LLM judge).
 - Embedding requests are not throttled to the provider's 120 requests per minute; the SDK retries after a 429. A
   very large upload, or many questions at once, can exceed the limit and get 503.
-- Ranking: a page on the same topic sometimes outranks the exact page (3 of the 22 held-out misses, e.g. general
-  firewall settings above account-level firewall rules). A cross-encoder reranker (e.g. bge-reranker-v2-m3) over the
-  top 20 is the next step; it was left out to keep the stack at three services.
+- Misses: of the 22 answerable held-out questions, 3 were refused. In two, a page on the same topic ranked above the
+  exact page (account registration above the wallet page, general caching above the download bucket); in one the
+  exact page was retrieved and the 4B model still judged it insufficient (account-level firewall rules) — that page
+  is then the first `related` pointer. A cross-encoder reranker (e.g. bge-reranker-v2-m3) over the top 20 is the next
+  step for the first kind, a larger model for the second; both were measured and left out on a 24 GB laptop.
 - Answers take 1–2 s to refuse and 10–25 s for a long answer on a laptop GPU (Gemma 4 e4b, ~50 tokens/s); the
   translation adds one short model call. Streaming the answer would show text as it is written.
 - A question in one language about a short document in the other scores lower similarity and can still be refused

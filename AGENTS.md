@@ -15,6 +15,7 @@ Commands (all in the `Makefile`):
 ```bash
 make dev        # local API with auto-reload (Postgres in Docker, migrations applied)
 make check      # lint + mypy --strict + tests — run before every commit; CI runs the same
+make test-live  # real scenarios against the running stack (no fakes); after make run / run-gpu
 make format     # fix formatting
 make run        # full stack in Docker
 make run-gpu    # same, model in Docker Model Runner (Apple GPU on a Mac)
@@ -41,6 +42,8 @@ New migration: `uv run alembic revision -m "<what changes>"`, then edit `upgrade
 - No LangChain vector stores, LangGraph or LlamaIndex (decision 3). Only `RecursiveCharacterTextSplitter` from `langchain-text-splitters`; its Markdown splitter drops Persian half-spaces.
 - Type-check with mypy `--strict` (ty is still beta). Format and lint with Ruff.
 - Tests: behaviour over implementation; integration tests use a real Postgres, never mocks of the database.
+  `tests/test_live.py` checks the same requirements end to end with the real models; run it after changing
+  retrieval, prompts or models.
 - Latest stable versions of dependencies; check the registry, never pin from memory.
 - PDF parsing shells out to poppler `pdftotext` (installed in the Docker image and in CI; `brew install poppler` locally).
 

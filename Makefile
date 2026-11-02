@@ -1,4 +1,4 @@
-.PHONY: run run-gpu down dev test check format
+.PHONY: run run-gpu down dev test test-live check format
 
 run: ## Build and start Postgres, Ollama and the API in Docker
 	docker compose up --build --detach --wait
@@ -19,6 +19,9 @@ dev: ## Run the API locally with auto-reload (Postgres and Ollama in Docker)
 
 test: ## Run tests
 	uv run pytest
+
+test-live: ## Real scenarios against the running stack (`make run` or `make run-gpu` first); slow, needs the API key
+	LIVE_API=http://localhost:8000 uv run pytest tests/test_live.py -v
 
 check: ## Lint, type-check and test (what CI runs)
 	uv run ruff check .
