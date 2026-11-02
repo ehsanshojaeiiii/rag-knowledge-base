@@ -69,8 +69,12 @@ class TestGroundedAnswers:
 
     @pytest.mark.parametrize(
         "reply",
-        ["The basic plan costs 10 dollars.", "It costs 10 dollars [1][7]."],
-        ids=["no-citation", "cites-a-source-it-was-not-given"],
+        [
+            "The basic plan costs 10 dollars.",
+            "It costs 10 dollars [1][7].",
+            "The basic plan costs 15 dollars per month [1].",
+        ],
+        ids=["no-citation", "cites-a-source-it-was-not-given", "number-not-in-the-source"],
     )
     def test_ungrounded_replies_are_not_returned(
         self, client: TestClient, llm: FakeLLM, reply: str
@@ -82,6 +86,33 @@ class TestGroundedAnswers:
 
         assert result["status"] == "insufficient_information"
         assert result["citations"] == []
+
+    def test_numbers_are_matched_across_languages_and_formats(
+        self, client: TestClient, llm: FakeLLM
+    ) -> None:
+        upload(client, "pricing.md", PLAN_V1.replace(b"10 dollars", b"1,200 dollars"))
+        llm.reply = "پلن پایه ماهانه ۱۲۰۰ دلار است [1]."
+
+        assert ask(client, QUESTION)["status"] == "answered"
+
+    def test_numbered_steps_are_not_mistaken_for_claims(
+        self, client: TestClient, llm: FakeLLM
+    ) -> None:
+        upload(client, "pricing.md", PLAN_V1)
+        llm.reply = "To choose it:\n1. Open the panel [1].\n2. Pick the 10 dollars plan [1]."
+
+        assert ask(client, QUESTION)["status"] == "answered"
+
+    def test_quote_is_the_sentence_that_supports_the_answer(
+        self, client: TestClient, llm: FakeLLM
+    ) -> None:
+        upload(client, "pricing.md", PLAN_V1 + b" It includes 50 GB.")
+        llm.reply = "The basic plan costs 10 dollars per month [1]."
+
+        [citation] = ask(client, QUESTION)["citations"]
+
+        assert citation["quote"] == "The basic plan costs 10 dollars per month."
+        assert citation["content"].endswith("It includes 50 GB.")
 
 
 class TestNotEnoughInformation:

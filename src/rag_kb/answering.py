@@ -2,7 +2,8 @@
 
 Two gates keep answers grounded:
 1. before the LLM: if no chunk is similar enough to the question, the LLM is not called at all;
-2. after the LLM: the answer must cite at least one source, and only sources it was given.
+2. after the LLM: the answer must cite at least one source, only sources it was given, and every
+   number it states must appear in a source it cites.
 """
 
 import html
@@ -19,6 +20,7 @@ from sqlalchemy.orm import Session
 from rag_kb import retrieval
 from rag_kb.config import get_settings
 from rag_kb.embeddings import Embedder
+from rag_kb.ingest import normalize
 
 NO_ANSWER = "NOT_ENOUGH_INFORMATION"
 INSUFFICIENT_MESSAGE = "The documents do not contain enough information to answer this question."
@@ -32,6 +34,9 @@ SYSTEM_PROMPT = f"""You answer questions using only the numbered sources provide
 - Answer in the language of the question, even when the sources are in another language."""
 
 _CITATION = re.compile(r"\[(\d+)\]")
+_SENTENCE_END = re.compile(r"(?<=[.!?؟])\s+|\n+")
+_LIST_MARKER = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+", re.MULTILINE)
+_NUMBER = re.compile(r"\d+(?:[.,٫٬]\d+)*")
 
 
 class LLMUnavailable(RuntimeError):
@@ -83,7 +88,8 @@ class Citation:
     section: str | None
     page: int | None
     chunk_id: int
-    quote: str
+    quote: str  # the sentence of the chunk that best matches the answer, or the whole chunk
+    content: str  # the whole retrieved chunk
 
 
 @dataclass(frozen=True)
@@ -101,12 +107,15 @@ def answer(session: Session, embedder: Embedder, llm: LLM, question: str, top_k:
 
     reply = llm.complete(SYSTEM_PROMPT, build_prompt(question, evidence)).strip()
     cited = cited_sources(reply, len(evidence))
-    if not cited:
+    if not cited or not numbers_are_grounded(reply, evidence):
         return _insufficient()
+    sentences = _sentences(reply)
     return Answer(
         status="answered",
         answer=reply,
-        citations=[_citation(n, evidence[n - 1]) for n in cited],
+        citations=[
+            _citation(n, evidence[n - 1], [s for s in sentences if f"[{n}]" in s]) for n in cited
+        ],
     )
 
 
@@ -135,7 +144,48 @@ def cited_sources(reply: str, source_count: int) -> list[int]:
     return cited
 
 
-def _citation(source: int, hit: retrieval.Hit) -> Citation:
+def numbers_are_grounded(reply: str, sources: list[retrieval.Hit]) -> bool:
+    """Every number in a sentence appears in a source the sentence cites.
+
+    A sentence without its own citation is checked against every source the answer cites. Digits
+    are normalised on both sides, so a Persian answer can be checked against an English source.
+    This catches the most harmful invented details — prices, limits, versions — at no cost.
+    """
+    answer_cites = cited_sources(reply, len(sources))
+    for sentence in _sentences(_LIST_MARKER.sub("", reply)):  # "1." of a list is not a claim
+        cites = [int(n) for n in _CITATION.findall(sentence)] or answer_cites
+        stated = _numbers(_CITATION.sub("", sentence))
+        if not stated <= set().union(*(_numbers(sources[n - 1].content) for n in cites)):
+            return False
+    return True
+
+
+def _sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENTENCE_END.split(text) if s.strip()]
+
+
+def _numbers(text: str) -> set[str]:
+    """1,200 and 1200 are the same number; ٫ is the Persian decimal point."""
+    return {
+        n.replace(",", "").replace("٬", "").replace("٫", ".")
+        for n in _NUMBER.findall(normalize(text))
+    }
+
+
+def _terms(text: str) -> set[str]:
+    words = re.findall(r"[^\W_]+", normalize(_CITATION.sub("", text)).lower())
+    return {w for w in words if w not in retrieval.STOPWORDS}
+
+
+def _quote(content: str, claims: list[str]) -> str:
+    """The sentence of a chunk sharing the most words and numbers with the answer sentences that
+    cite it; the whole chunk when none shares any (e.g. an answer in another language)."""
+    wanted = _terms(" ".join(claims))
+    best = max(_sentences(content), key=lambda s: len(_terms(s) & wanted), default=content)
+    return best if _terms(best) & wanted else content
+
+
+def _citation(source: int, hit: retrieval.Hit, claims: list[str]) -> Citation:
     return Citation(
         source=source,
         document_id=hit.document_id,
@@ -144,7 +194,8 @@ def _citation(source: int, hit: retrieval.Hit) -> Citation:
         section=hit.section,
         page=hit.page,
         chunk_id=hit.chunk_id,
-        quote=hit.content,
+        quote=_quote(hit.content, claims),
+        content=hit.content,
     )
 
 
