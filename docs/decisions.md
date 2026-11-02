@@ -258,6 +258,13 @@ is real but smaller than on questions written to test it.
 `models:` and runs it in Docker Model Runner (llama.cpp on Metal, ~50 tokens/s for e4b), keeping a one-command,
 Docker-managed stack; `make run` stays the portable default.
 
+**Related pages on a refusal.** About one answerable question in ten is refused, usually because a page on the
+same topic outranked the exact one or the model judged the sources insufficient. Showing the model's unverified
+answer with a warning would break "do not produce unsupported answers", so a refusal instead lists up to three of
+the pages it searched (`related`, one per document, quoting the sentence nearest the question) when gate 1 passed.
+For "apply one firewall rule to several domains", refused, the first related page is the account-level firewall
+page that answers it. A refusal at gate 1 lists nothing: no page was similar enough to point to.
+
 **Questions page.** The brief asks for API access without a GUI. A single static page at `/` (`app.frontend`, no
 build step) makes a demo readable — Persian right to left, citations linked to their quotes — and every piece of
 API text is inserted as text, never parsed as HTML, so a document cannot inject script into the page.

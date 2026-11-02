@@ -152,6 +152,7 @@ class TestNotEnoughInformation:
         assert result["status"] == "insufficient_information"
         assert "not contain enough information" in result["answer"]
         assert llm.prompts == []
+        assert result["related"] == []  # nothing was similar enough to point to
 
     def test_model_refusal_is_reported_as_insufficient(
         self, client: TestClient, llm: FakeLLM
@@ -159,7 +160,26 @@ class TestNotEnoughInformation:
         upload(client, "pricing.md", PLAN_V1)
         llm.reply = NO_ANSWER
 
-        assert ask(client, QUESTION)["status"] == "insufficient_information"
+        result = ask(client, QUESTION)
+
+        assert result["status"] == "insufficient_information"
+        assert result["citations"] == []
+        # The pages it searched are offered as pointers, never as an answer.
+        [related] = result["related"]
+        assert related["title"] == "pricing"
+        assert related["quote"] == "The basic plan costs 10 dollars per month."
+
+    def test_a_related_page_in_another_language_quotes_its_first_sentence(
+        self, client: TestClient, llm: FakeLLM
+    ) -> None:
+        wallet = "# کیف پول\nبرای شارژ کیف پول روی پرداخت و افزایش اعتبار کلیک کنید."
+        upload(client, "wallet.md", wallet.encode())
+        llm.translation = "شارژ کیف پول"
+        llm.reply = NO_ANSWER
+
+        [related] = ask(client, "How do I top up my wallet?")["related"]
+
+        assert related["quote"] == "برای شارژ کیف پول روی پرداخت و افزایش اعتبار کلیک کنید."
 
     def test_empty_knowledge_base_is_refused(self, client: TestClient) -> None:
         assert ask(client, QUESTION)["status"] == "insufficient_information"

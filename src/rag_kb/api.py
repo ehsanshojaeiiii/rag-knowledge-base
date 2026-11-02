@@ -57,6 +57,7 @@ _ANSWER_EXAMPLE = {
             "content": "The basic plan costs 12 dollars per month. It includes 50 GB.",
         }
     ],
+    "related": [],
 }
 
 
@@ -198,7 +199,8 @@ def ask(
 
     `status` is `insufficient_information` when the documents do not support an answer. Each
     citation's `quote` is the sentence of the source that best matches the answer; `content` is
-    the whole retrieved chunk.
+    the whole retrieved chunk. When the question is refused although similar chunks were found,
+    `related` lists up to three of their pages as pointers; they are not an answer.
     """
     return answering.answer(session, embedder, llm, request.question, request.top_k)
 

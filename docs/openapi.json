@@ -415,7 +415,7 @@
           "answers"
         ],
         "summary": "Ask",
-        "description": "Answer a question from the documents, with a citation for every source used.\n\n`status` is `insufficient_information` when the documents do not support an answer. Each\ncitation's `quote` is the sentence of the source that best matches the answer; `content` is\nthe whole retrieved chunk.",
+        "description": "Answer a question from the documents, with a citation for every source used.\n\n`status` is `insufficient_information` when the documents do not support an answer. Each\ncitation's `quote` is the sentence of the source that best matches the answer; `content` is\nthe whole retrieved chunk. When the question is refused although similar chunks were found,\n`related` lists up to three of their pages as pointers; they are not an answer.",
         "operationId": "ask_ask_post",
         "requestBody": {
           "content": {
@@ -449,7 +449,8 @@
                       "quote": "The basic plan costs 12 dollars per month.",
                       "content": "The basic plan costs 12 dollars per month. It includes 50 GB."
                     }
-                  ]
+                  ],
+                  "related": []
                 }
               }
             }
@@ -500,6 +501,13 @@
             },
             "type": "array",
             "title": "Citations"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Related"
           }
         },
         "type": "object",

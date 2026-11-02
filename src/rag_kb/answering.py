@@ -9,7 +9,7 @@ Two gates keep answers grounded:
 
 import html
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 from typing import Literal, Protocol
 from uuid import UUID
@@ -102,6 +102,9 @@ class Answer:
     status: Literal["answered", "insufficient_information"]
     answer: str
     citations: list[Citation]
+    # On a refusal after similar chunks were found: up to three pages that may be worth reading.
+    # They are shown as pointers, never as an answer; nothing in them was checked.
+    related: list[Citation] = field(default_factory=list)
 
 
 def answer(session: Session, embedder: Embedder, llm: LLM, question: str, top_k: int = 5) -> Answer:
@@ -112,7 +115,7 @@ def answer(session: Session, embedder: Embedder, llm: LLM, question: str, top_k:
     reply = llm.complete(SYSTEM_PROMPT, build_prompt(question, evidence)).strip()
     cited = cited_sources(reply, len(evidence))
     if not cited or not numbers_are_grounded(reply, evidence):
-        return _insufficient()
+        return _insufficient(_related(question, evidence))
     sentences = _sentences(reply)
     return Answer(
         status="answered",
@@ -214,5 +217,26 @@ def _citation(source: int, hit: retrieval.Hit, claims: list[str]) -> Citation:
     )
 
 
-def _insufficient() -> Answer:
-    return Answer(status="insufficient_information", answer=INSUFFICIENT_MESSAGE, citations=[])
+def _related(question: str, hits: list[retrieval.Hit]) -> list[Citation]:
+    """The best chunk of each of the first three documents, quoting the sentence nearest the
+    question."""
+    firsts: dict[UUID, int] = {}
+    for n, hit in enumerate(hits, start=1):
+        firsts.setdefault(hit.document_id, n)
+    related = []
+    for n in list(firsts.values())[:3]:
+        citation = _citation(n, hits[n - 1], [question])
+        if citation.quote == citation.content:  # no sentence shares a word with the question
+            sentences = [s for s in _sentences(citation.content) if not s.startswith("#")]
+            citation = replace(citation, quote=sentences[0] if sentences else citation.content)
+        related.append(citation)
+    return related
+
+
+def _insufficient(related: list[Citation] | None = None) -> Answer:
+    return Answer(
+        status="insufficient_information",
+        answer=INSUFFICIENT_MESSAGE,
+        citations=[],
+        related=related or [],
+    )

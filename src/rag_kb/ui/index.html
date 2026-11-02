@@ -199,7 +199,7 @@ function citation(c) {
   return el("div", {class: "cite", id: `cite-${c.source}`},
     el("div", {class: "meta"}, ref(c.source), " ", el("b", {}, c.title),
       ...where.flatMap((part) => [" · ", el("bdi", {}, String(part))])),
-    el("blockquote", {dir: "auto"}, ...inline(c.quote.replace(LIST_ITEM, ""))),
+    el("blockquote", {dir: "auto"}, ...inline(c.quote.replace(LIST_ITEM, "").replace(/^>\s*/, ""))),
     el("details", {}, el("summary", {}, "Whole retrieved chunk"), el("pre", {dir: "auto"}, c.content)));
 }
 
@@ -227,7 +227,11 @@ async function ask() {
     $("result").replaceChildren(
       el("span", {class: `badge ${result.status}`}, label),
       render(result.answer),
-      ...(result.citations.length ? [el("h2", {}, "Sources"), ...result.citations.map(citation)] : []));
+      ...(result.citations.length ? [el("h2", {}, "Sources"), ...result.citations.map(citation)] : []),
+      ...(result.related.length ? [
+        el("h2", {}, "Pages that may be related"),
+        el("p", {class: "hint"}, "Not an answer: these pages were close to the question, but they were not found to answer it."),
+        ...result.related.map(citation)] : []));
   } catch (error) {
     $("result").replaceChildren(el("div", {class: "error"}, error.message));
   } finally {

@@ -45,7 +45,8 @@ curl http://localhost:8000/ask -H 'Content-Type: application/json' \
 # → {"status": "answered", "answer": "… [1].",
 #    "citations": [{"source": 1, "title": "pricing", "version": 1, "section": "Pricing > Basic plan",
 #                   "page": null, "quote": "<the supporting sentence>", "content": "<the whole chunk>"}]}
-# or {"status": "insufficient_information", "answer": "The documents do not contain enough information …"}
+# or {"status": "insufficient_information", "answer": "The documents do not contain enough information …",
+#     "related": [<up to three pages that came close: pointers to read, never an answer>]}
 
 # Replace a document with a new version; If-Match guards against overwriting someone else's edit (409)
 curl -X PUT -H 'If-Match: 1' -F file=@pricing.md http://localhost:8000/documents/019a…
@@ -80,7 +81,8 @@ libraries, models, PDF extraction, Persian handling — is recorded with its rea
 - **Two grounding gates**: below a similarity threshold the LLM is not called at all; after the LLM, an answer is
   returned only if it cites sources it was actually given, and every number it states (prices, limits) appears in
   a source it cites. Document text is escaped in the prompt, so a document
-  cannot inject instructions.
+  cannot inject instructions. A refusal after similar pages were found lists up to three of them as `related`
+  pointers — the reader gets a lead, and the service still states nothing it could not support.
 - **Provider-agnostic models**: embeddings and the LLM are reached through the OpenAI-compatible API, so ArvanCloud
   AIaaS, vLLM or a hosted model replace the local Ollama by configuration only.
 
