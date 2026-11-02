@@ -23,6 +23,7 @@ dev = [
     "testcontainers[postgres]>=4.15.0",
 ]
 eval = [
+    "certifi>=2026.10.23",
     "markdownify>=1.2.3",
     "numpy>=2.5.4",
 ]

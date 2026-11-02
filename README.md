@@ -132,6 +132,12 @@ uv run --group eval python eval/evaluate.py answers     # score the running serv
 EVAL_QUESTIONS=eval/questions-holdout.jsonl uv run --group eval python eval/evaluate.py answers   # held-out set
 ```
 
+To try another ArvanCloud page, save it as Markdown in `data/pages/` and upload it from the questions page:
+
+```bash
+uv run --group eval python eval/fetch_arvan_docs.py https://docs.arvancloud.ir/en/vod/speech-to-text
+```
+
 ## Tests
 
 `make test` runs everything against a throwaway Postgres; the embedding API and the LLM are replaced by

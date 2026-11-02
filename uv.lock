@@ -1288,6 +1288,7 @@ dev = [
     { name = "testcontainers" },
 ]
 eval = [
+    { name = "certifi" },
     { name = "markdownify" },
     { name = "numpy" },
 ]
@@ -1312,6 +1313,7 @@ dev = [
     { name = "testcontainers", extras = ["postgres"], specifier = ">=4.15.0" },
 ]
 eval = [
+    { name = "certifi", specifier = ">=2026.10.23" },
     { name = "markdownify", specifier = ">=1.2.3" },
     { name = "numpy", specifier = ">=2.5.4" },
 ]
