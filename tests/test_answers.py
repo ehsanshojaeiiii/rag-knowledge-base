@@ -40,17 +40,17 @@ class TestGroundedAnswers:
         assert (citation["version"], citation["section"]) == (1, "Pricing > Basic plan")
         assert "10 dollars" in citation["quote"]
 
-    def test_the_llm_sees_only_retrieved_sources_and_the_question(
+    def test_once_one_source_is_similar_enough_the_llm_sees_all_retrieved_sources(
         self, client: TestClient, llm: FakeLLM
     ) -> None:
-        upload(client, "pricing.md", PLAN_V1)
-        upload(client, "weather.md", b"Tehran is sunny in summer.")
+        # A weaker match can hold the answer, e.g. a manual's steps on the page after its title.
+        upload(client, "pricing.md", PLAN_V1 + b"\n## Payment\nPay by card before the plan starts.")
 
         ask(client, QUESTION)
 
         [prompt] = llm.prompts
         assert '<source id="1"' in prompt and "10 dollars" in prompt
-        assert "Tehran" not in prompt
+        assert "Pay by card" in prompt
         assert prompt.endswith(f"Question: {QUESTION}")
 
     def test_document_text_cannot_break_out_of_its_source_tag(

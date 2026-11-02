@@ -2,6 +2,7 @@
 
 Two gates keep answers grounded:
 1. before the LLM: if no chunk is similar enough to the question, the LLM is not called at all;
+   otherwise it gets every retrieved chunk, since a weaker match can hold the answer;
 2. after the LLM: the answer must cite at least one source, only sources it was given, and every
    number it states must appear in a source it cites.
 """
@@ -101,9 +102,9 @@ class Answer:
 
 def answer(session: Session, embedder: Embedder, llm: LLM, question: str, top_k: int = 5) -> Answer:
     hits = retrieval.search(session, embedder, question, top_k)
-    evidence = [h for h in hits if h.similarity >= get_settings().min_similarity]
-    if not evidence:
+    if not hits or max(h.similarity for h in hits) < get_settings().min_similarity:
         return _insufficient()
+    evidence = hits
 
     reply = llm.complete(SYSTEM_PROMPT, build_prompt(question, evidence)).strip()
     cited = cited_sources(reply, len(evidence))

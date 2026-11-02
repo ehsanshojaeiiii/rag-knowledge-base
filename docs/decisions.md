@@ -91,7 +91,7 @@ a hosted API (ArvanCloud AIaaS, OpenAI) costs per token and would require review
 
 **Why Gemma 4 e4b, QAT build.** The newest open model family that fits a laptop (~6 GB); QAT (quantization-aware
 training) keeps more quality at 4-bit than quantizing afterwards. Measured through the API on 88 questions (decision 6):
-all 20 unanswerable questions refused, 56 of 68 answerable ones answered with a citation to a labelled page.
+all 20 unanswerable questions refused, 57 of 68 answerable ones answered with a citation to a labelled page.
 
 **Thinking off.** Gemma 4 reasons before answering by default: ~690 hidden tokens for a 26-token answer. With
 `reasoning_effort: none` (`LLM_REASONING_EFFORT`, set in `compose.yaml`) the same answer took 2.7 s instead of
@@ -105,11 +105,13 @@ The parameter is sent only when set, because models without reasoning reject it.
 when given one.
 Larger options: `gemma4:12b` (7.7 GB); Qwen 3.6/3.8 start at ~16–18 GB.
 
-**Grounding.** Two gates: no chunk above the similarity threshold → "not enough information" without calling the
-LLM; after the LLM, the answer must cite at least one source, only sources it was given, and every number it
+**Grounding.** Two gates: if the best chunk is below the similarity threshold → "not enough information" without
+calling the LLM; otherwise the LLM gets all top-5 chunks, because a weaker match can hold the answer (a manual's
+reset steps on the page after its title). Filtering each chunk by the threshold had dropped such pages: answering
+from all five raised the end-to-end result from 56/68 to 57/68, still with 20/20 refused (measured 2026-11-02); after the LLM, the answer must cite at least one source, only sources it was given, and every number it
 states must appear in a source it cites (digits are normalised on both sides, so a Persian answer is checked
 against an English source; list numbering is ignored). On the 68 answerable evaluation questions the number check
-blocked none, and the end-to-end result stayed 56/68 answered and 20/20 refused. It does not check that the wording
+blocked none (56/68 answered and 20/20 refused, before the change above). It does not check that the wording
 of a sentence is supported; that would need an NLI model or an LLM judge per sentence. Each citation quotes the
 sentence of its chunk that shares the most words and numbers with the answer (the whole chunk when none does, as
 for an answer in another language) and also returns the whole chunk. Source text is

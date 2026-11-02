@@ -106,7 +106,7 @@ question (accuracy 0.92: one more near miss reaches the model); the model and th
 BGE-M3 is several times faster, fits a standard HNSW index and separates answerable from unanswerable questions as
 well as the larger models; the reasoning and the upgrade path are in [decision 6](docs/decisions.md).
 
-End to end through `/ask`, with Gemma 4 answering: **all 20 unanswerable questions were refused**, and 56 of the 68
+End to end through `/ask`, with Gemma 4 answering: **all 20 unanswerable questions were refused**, and 57 of the 68
 answerable ones were answered with a citation to a labelled page (strict: a correct answer citing a related overview
 page counts as wrong). Gemma 4's "thinking" is turned off (`LLM_REASONING_EFFORT=none`): on the same questions it was
 4–5× slower and not more accurate.
@@ -153,6 +153,8 @@ make format                 # fix formatting
   cited source; it does not verify that the wording of each sentence is supported (that needs an NLI or LLM judge).
 - Embedding requests are not throttled to the provider's 120 requests per minute; the SDK retries after a 429. A
   very large upload, or many questions at once, can exceed the limit and get 503.
+- A question in one language about a short document in the other scores lower similarity and can be refused even
+  when the answer is there (seen at 0.50–0.57 against the 0.58 threshold); the threshold favours refusing over guessing.
 - PDFs that split the Persian لا ligature during text extraction keep that defect; vector search still matches
   such words by meaning, keyword search may miss them.
 - Uploads are processed synchronously; very large documents would move to a background job in production.
