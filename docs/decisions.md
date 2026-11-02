@@ -221,7 +221,7 @@ dictionary; vector search still matches these words by meaning, keyword search m
 | top_k | 5 by default; `/search` ≤ 20, `/ask` ≤ 10 | `api.py` | Five chunks are what the evaluation measured (Recall@5) and what the model receives. |
 | `min_similarity` | 0.58 | `config.py`, `MIN_SIMILARITY` | Decision 6. |
 | `query_translation` | on | `config.py`, `QUERY_TRANSLATION` | Decision 10: +3 answered of 68. |
-| LLM | `gemma4:e4b-it-qat` (`ai/gemma4:e4b` in `make run-gpu`), temperature 0, `reasoning_effort` none | `config.py`, `compose.yaml`, `compose.gpu.yaml` | Decisions 4 and 10. Temperature 0: the same question gives the same answer, which makes answers reproducible and testable. |
+| LLM | `gemma4:e4b-it-qat` (container or host Ollama), temperature 0, `reasoning_effort` none | `config.py`, `compose.yaml`, `compose.gpu.yaml` | Decisions 4 and 10. Temperature 0: the same question gives the same answer, which makes answers reproducible and testable. |
 | Timeouts / retries | embeddings 60 s / 5; LLM 120 s / 2; `pdftotext` 60 s | `embeddings.py`, `answering.py`, `ingest.py` | Embedding calls are short and rate-limited, so more retries; an LLM call is long, so fewer. A pathological PDF cannot hold a worker for more than a minute. |
 | Upload limit | 20 MB | `config.py`, `MAX_UPLOAD_BYTES` | Uploads are processed synchronously; larger files belong in a background job. |
 | Question length | 1–2,000 characters | `api.py` | A question, not a document. |
@@ -254,9 +254,12 @@ is real but smaller than on questions written to test it.
 - **Real BM25** (ParadeDB `pg_search`, `pg_textsearch`): needs a different Postgres image; keyword search is the
   secondary signal here.
 
-**GPU.** Docker containers on macOS cannot use the Apple GPU. `make run-gpu` declares the model with Compose
-`models:` and runs it in Docker Model Runner (llama.cpp on Metal, ~50 tokens/s for e4b), keeping a one-command,
-Docker-managed stack; `make run` stays the portable default.
+**GPU.** Docker containers on macOS cannot use the Apple GPU. `make run-gpu` keeps Postgres and the API in Docker
+and points the API at Ollama on the host, which runs the same `gemma4:e4b-it-qat` build on Metal (~58 tokens/s; the 6
+live tests in 31 s instead of 68 s). Docker Model Runner, which also uses the GPU and is declared in Compose, was
+measured and rejected: llama.cpp ignores `reasoning_effort`, so Gemma 4 thought before every answer, and its
+`ai/gemma4:e4b` is a post-training Q4_K_M quantization rather than QAT — 57 of 68 answered and 18 of 22 held-out,
+3× slower. `make run` stays the portable default.
 
 **Related pages on a refusal.** About one answerable question in ten is refused, usually because a page on the
 same topic outranked the exact one or the model judged the sources insufficient. Showing the model's unverified

@@ -4,7 +4,10 @@ run: ## Build and start Postgres, Ollama and the API in Docker
 	docker compose up --build --detach --wait
 	@echo "Questions: http://localhost:8000  Swagger UI: http://localhost:8000/docs"
 
-run-gpu: ## Same, with the language model in Docker Model Runner (Apple GPU on a Mac)
+run-gpu: ## Same, with the language model in Ollama on the host (uses the Apple GPU on a Mac)
+	@curl -sf http://localhost:11434/api/version >/dev/null || \
+		{ echo "Start Ollama on the host first: ollama serve (install: brew install ollama)"; exit 1; }
+	ollama pull gemma4:e4b-it-qat
 	docker compose -f compose.yaml -f compose.gpu.yaml up --build --detach --wait
 	@echo "Questions: http://localhost:8000  Swagger UI: http://localhost:8000/docs"
 

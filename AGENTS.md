@@ -18,7 +18,7 @@ make check      # lint + mypy --strict + tests — run before every commit; CI r
 make test-live  # real scenarios against the running stack (no fakes); after make run / run-gpu
 make format     # fix formatting
 make run        # full stack in Docker
-make run-gpu    # same, model in Docker Model Runner (Apple GPU on a Mac)
+make run-gpu    # same, model in Ollama on the host (Apple GPU on a Mac)
 ```
 
 New migration: `uv run alembic revision -m "<what changes>"`, then edit `upgrade()` and `downgrade()`.
