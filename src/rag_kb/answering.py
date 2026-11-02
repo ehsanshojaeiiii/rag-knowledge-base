@@ -182,7 +182,9 @@ def _quote(content: str, claims: list[str]) -> str:
     """The sentence of a chunk sharing the most words and numbers with the answer sentences that
     cite it; the whole chunk when none shares any (e.g. an answer in another language)."""
     wanted = _terms(" ".join(claims))
-    best = max(_sentences(content), key=lambda s: len(_terms(s) & wanted), default=content)
+    # A heading is not a claim, so it can never be the supporting sentence.
+    sentences = [s for s in _sentences(content) if not s.startswith("#")]
+    best = max(sentences, key=lambda s: len(_terms(s) & wanted), default=content)
     return best if _terms(best) & wanted else content
 
 
