@@ -24,6 +24,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The embedding service, the language model or the database is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
           }
         }
       }
@@ -34,6 +44,7 @@
           "documents"
         ],
         "summary": "List Documents",
+        "description": "List all documents, newest first, each at its current version.",
         "operationId": "list_documents_documents_get",
         "responses": {
           "200": {
@@ -57,7 +68,7 @@
           "documents"
         ],
         "summary": "Create Document",
-        "description": "Upload a document. It is searchable as soon as this returns.",
+        "description": "Upload a document. It is searchable as soon as this returns.\n\n422 also means no text could be extracted (an empty file, or a scanned PDF without a text\nlayer) or a text file that is not UTF-8.",
         "operationId": "create_document_documents_post",
         "requestBody": {
           "content": {
@@ -76,6 +87,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The file is larger than MAX_UPLOAD_BYTES (20 MB by default)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not a PDF, Markdown (.md) or text (.txt) file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The embedding service, the language model or the database is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -99,6 +140,7 @@
           "documents"
         ],
         "summary": "Get Document",
+        "description": "Return one document and its current version.",
         "operationId": "get_document_documents__document_id__get",
         "parameters": [
           {
@@ -123,6 +165,16 @@
               }
             }
           },
+          "404": {
+            "description": "No document with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -140,7 +192,7 @@
           "documents"
         ],
         "summary": "Replace Document",
-        "description": "Replace a document's content with a new version.\n\nAnswers keep using the previous version until the new one is fully processed, then switch\nat once. Uploading identical content does not create a new version.",
+        "description": "Replace a document's content with a new version.\n\nAnswers keep using the previous version until the new one is fully processed, then switch\nat once. Uploading identical content does not create a new version. 422 as for upload.",
         "operationId": "replace_document_documents__document_id__put",
         "parameters": [
           {
@@ -193,6 +245,56 @@
               }
             }
           },
+          "404": {
+            "description": "No document with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "If-Match is not the current version, or another edit landed while this one was processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The file is larger than MAX_UPLOAD_BYTES (20 MB by default)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not a PDF, Markdown (.md) or text (.txt) file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The embedding service, the language model or the database is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -227,6 +329,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "No document with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -274,6 +386,16 @@
               }
             }
           },
+          "503": {
+            "description": "The embedding service, the language model or the database is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -293,7 +415,7 @@
           "answers"
         ],
         "summary": "Ask",
-        "description": "Answer a question from the documents, with a citation for every source used.\n\n`status` is `insufficient_information` when the documents do not support an answer.",
+        "description": "Answer a question from the documents, with a citation for every source used.\n\n`status` is `insufficient_information` when the documents do not support an answer. Each\ncitation's `quote` is the sentence of the source that best matches the answer; `content` is\nthe whole retrieved chunk.",
         "operationId": "ask_ask_post",
         "requestBody": {
           "content": {
@@ -312,6 +434,32 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Answer"
+                },
+                "example": {
+                  "status": "answered",
+                  "answer": "The basic plan costs 12 dollars per month [1].",
+                  "citations": [
+                    {
+                      "source": 1,
+                      "document_id": "019a2b3c-4d5e-7f60-8a1b-2c3d4e5f6a7b",
+                      "title": "pricing",
+                      "version": 2,
+                      "section": "Pricing > Basic plan",
+                      "chunk_id": 42,
+                      "quote": "The basic plan costs 12 dollars per month.",
+                      "content": "The basic plan costs 12 dollars per month. It includes 50 GB."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The embedding service, the language model or the database is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -368,7 +516,10 @@
             "type": "string",
             "maxLength": 2000,
             "minLength": 1,
-            "title": "Question"
+            "title": "Question",
+            "examples": [
+              "How much does the basic plan cost?"
+            ]
           },
           "top_k": {
             "type": "integer",
@@ -487,6 +638,10 @@
           "quote": {
             "type": "string",
             "title": "Quote"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
           }
         },
         "type": "object",
@@ -498,7 +653,8 @@
           "section",
           "page",
           "chunk_id",
-          "quote"
+          "quote",
+          "content"
         ],
         "title": "Citation"
       },
@@ -547,6 +703,19 @@
           "updated_at"
         ],
         "title": "DocumentOut"
+      },
+      "ErrorOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorOut"
       },
       "HTTPValidationError": {
         "properties": {
@@ -653,7 +822,10 @@
             "type": "string",
             "maxLength": 2000,
             "minLength": 1,
-            "title": "Query"
+            "title": "Query",
+            "examples": [
+              "پاک کردن کش CDN"
+            ]
           },
           "top_k": {
             "type": "integer",
