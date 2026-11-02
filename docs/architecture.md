@@ -33,7 +33,7 @@ flowchart LR
 | Hybrid search | Vector similarity + keyword match (all words must match), fused by rank (RRF), over **current versions only**. |
 | Evidence check | Drop hits below the similarity threshold; if none is left, answer "not enough information" without calling the LLM. |
 | Generate | The LLM answers only from numbered sources and cites them as `[n]`. |
-| Verify | Every `[n]` must be a source we sent; an answer with no valid citation becomes "not enough information". |
+| Verify | Every `[n]` must be a source we sent, and every number in a sentence must appear in a source that sentence cites (digits normalised, so this works across languages); otherwise "not enough information". Each citation quotes the sentence of its chunk that best matches the answer. |
 
 ## Editing a document without serving stale or mixed content
 
@@ -68,6 +68,6 @@ its chunks go with it in the same transaction (`ON DELETE CASCADE`), so it is ex
 | `embeddings.py` | Text → vectors through any OpenAI-compatible embeddings API, batched, with retries |
 | `documents.py` | Create, replace and delete documents; the one-transaction version switch |
 | `retrieval.py` | Hybrid search SQL (vector + keyword, current versions only) and rank fusion |
-| `answering.py` | Evidence gate, prompt, LLM call, citation check |
+| `answering.py` | Evidence gate, prompt, LLM call, citation and number check, quotes |
 | `api.py`, `main.py` | HTTP endpoints, request validation, domain errors → HTTP status codes |
 | `config.py`, `db.py`, `models.py` | Settings from the environment, database session, tables |

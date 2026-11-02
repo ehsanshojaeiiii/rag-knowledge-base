@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     llm_reasoning_effort: ReasoningEffort = None
 
     # Below this cosine similarity a chunk is not treated as evidence. Calibrated for Bge-m3 by
-    # eval/evaluate.py: the highest value that still refuses none of the answerable questions.
+    # eval/evaluate.py: its most accurate threshold is 0.588, the weakest answerable question;
+    # rounded down so that gate 1 refuses no answerable question (decision 6).
     min_similarity: float = 0.58
 
     max_upload_bytes: int = 20 * 1024 * 1024

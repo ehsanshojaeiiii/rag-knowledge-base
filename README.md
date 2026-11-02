@@ -48,7 +48,7 @@ curl http://localhost:8000/ask -H 'Content-Type: application/json' \
   -d '{"question": "قیمت پلن پایه چقدر است؟"}'
 # → {"status": "answered", "answer": "… [1].",
 #    "citations": [{"source": 1, "title": "pricing", "version": 1, "section": "Pricing > Basic plan",
-#                   "page": null, "quote": "…"}]}
+#                   "page": null, "quote": "<the supporting sentence>", "content": "<the whole chunk>"}]}
 # or {"status": "insufficient_information", "answer": "The documents do not contain enough information …"}
 
 # Replace a document with a new version; If-Match guards against overwriting someone else's edit (409)
@@ -66,7 +66,7 @@ curl http://localhost:8000/search -H 'Content-Type: application/json' -d '{"quer
 ```
 upload → parse (poppler / Markdown headings / text) → normalise Persian → split into chunks → embed → Postgres
 ask    → embed question → hybrid search (vector + keyword, current versions only) → enough evidence?
-       → LLM answers from numbered sources only → every [n] citation verified → answer + citations
+       → LLM answers from numbered sources only → citations and numbers verified → answer + citations
 ```
 
 Details and diagrams: [docs/architecture.md](docs/architecture.md). Every significant choice — language, storage,
@@ -79,7 +79,8 @@ libraries, models, PDF extraction, Persian handling — is recorded with its rea
 - **Hybrid search**: vector similarity finds paraphrases and cross-language matches; Postgres full-text search finds
   exact terms such as error codes; the two rankings are fused with Reciprocal Rank Fusion.
 - **Two grounding gates**: below a similarity threshold the LLM is not called at all; after the LLM, an answer is
-  returned only if it cites sources it was actually given. Document text is escaped in the prompt, so a document
+  returned only if it cites sources it was actually given, and every number it states (prices, limits) appears in
+  a source it cites. Document text is escaped in the prompt, so a document
   cannot inject instructions.
 - **Provider-agnostic models**: embeddings and the LLM are reached through the OpenAI-compatible API, so ArvanCloud
   AIaaS, vLLM or a hosted model replace the local Ollama by configuration only.
@@ -97,6 +98,10 @@ the first keyword search.
 | Embedding-3-Small | 1536 | 0.57 | 0.87 | 0.69 | 0.90 | 4.0 |
 | Embedding-3-Large | 3072 | 0.65 | 0.96 | 0.78 | 0.92 | 4.5 |
 | Gemini-embedding-001 | 3072 | 0.76 | 0.97 | 0.86 | 0.95 | 55.8 |
+
+Answer/abstain accuracy is at each model's most accurate threshold; for Bge-m3 that is 0.588, the similarity of the
+weakest answerable question. The service rounds it down to 0.58, so the similarity gate refuses no answerable
+question (accuracy 0.92: one more near miss reaches the model); the model and the citation check refuse the rest.
 
 BGE-M3 is several times faster, fits a standard HNSW index and separates answerable from unanswerable questions as
 well as the larger models; the reasoning and the upgrade path are in [decision 6](docs/decisions.md).
@@ -123,7 +128,7 @@ deterministic fakes, so tests are fast, free and repeatable.
 | Process text PDF, plain text and Markdown | `tests/test_ingest.py`, `TestDocumentProcessing` |
 | Add, edit, delete; outdated content never used | `TestChangeManagement` — edit leaves only the new version; a failed edit keeps the old one; stale `If-Match` → 409; an edit overtaken by another while embedding → 409; delete removes every chunk. `TestOutdatedContentIsNeverRetrieved` — search ignores old versions even if a stale chunk is left behind |
 | Retrieve the parts related to the question | `TestRelevantRetrieval` — best chunk ranks first, exact identifiers, Persian half-space spellings, citation fields |
-| Answer only from retrieved content, with traceable citations | `TestGroundedAnswers` — cites document, version and section; the model sees only retrieved sources; document text cannot break out of its source tag; answers without valid citations are withheld |
+| Answer only from retrieved content, with traceable citations | `TestGroundedAnswers` — cites document, version and section; the model sees only retrieved sources; document text cannot break out of its source tag; answers without valid citations are withheld; an answer stating a number its source does not contain is withheld; each citation quotes the supporting sentence |
 | Say clearly when information is missing | `TestNotEnoughInformation` — unrelated questions are refused without calling the model; model refusals are reported |
 | Answers follow document changes | `TestAnswersFollowDocumentChanges` — after an edit only the new version reaches the model; after a delete the question is refused |
 | API access with documented endpoints | `TestApiAccess`, `tests/test_openapi.py` (the committed spec matches the code) |
@@ -142,8 +147,12 @@ make format                 # fix formatting
 ## Limitations
 
 - Scanned PDFs (images without a text layer) are rejected; OCR is out of scope.
-- Plain-text files have no sections, so their citations point to the document and the quoted chunk; PDFs cite the
-  page, Markdown the heading path. Headings inside PDFs are not detected.
+- Plain-text files have no sections, so their citations point to the document and the quoted sentence; PDFs cite
+  the page, Markdown the heading path. Headings inside PDFs are not detected.
+- The citation check verifies that each `[n]` is a source the model was given and that every number appears in a
+  cited source; it does not verify that the wording of each sentence is supported (that needs an NLI or LLM judge).
+- Embedding requests are not throttled to the provider's 120 requests per minute; the SDK retries after a 429. A
+  very large upload, or many questions at once, can exceed the limit and get 503.
 - PDFs that split the Persian لا ligature during text extraction keep that defect; vector search still matches
   such words by meaning, keyword search may miss them.
 - Uploads are processed synchronously; very large documents would move to a background job in production.

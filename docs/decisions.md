@@ -99,13 +99,20 @@ all 20 unanswerable questions refused, 56 of 68 answerable ones answered with a 
 fewer. Retrieval and the two grounding gates do the work that matters; the model only phrases the evidence.
 The parameter is sent only when set, because models without reasoning reject it.
 
-**Speed.** Docker on macOS cannot use the Apple GPU, so in `make run` on a Mac Gemma runs on the CPU (10–25 s per
-answer measured with thinking on). With Ollama running natively (README) answers take 1–4 s; on Linux the Ollama
-container uses an NVIDIA GPU when given one.
+**Speed.** Docker on macOS cannot use the Apple GPU, so in `make run` on a Mac Gemma runs on the CPU: measured
+2026-11-02 on the evaluation corpus with thinking off, about 50 s for the first answer (the model loads), then
+5–11 s. With Ollama running natively (README) answers take 1–4 s; on Linux the Ollama container uses an NVIDIA GPU
+when given one.
 Larger options: `gemma4:12b` (7.7 GB); Qwen 3.6/3.8 start at ~16–18 GB.
 
 **Grounding.** Two gates: no chunk above the similarity threshold → "not enough information" without calling the
-LLM; after the LLM, the answer must cite at least one source and only sources it was given. Source text is
+LLM; after the LLM, the answer must cite at least one source, only sources it was given, and every number it
+states must appear in a source it cites (digits are normalised on both sides, so a Persian answer is checked
+against an English source; list numbering is ignored). On the 68 answerable evaluation questions the number check
+blocked none, and the end-to-end result stayed 56/68 answered and 20/20 refused. It does not check that the wording
+of a sentence is supported; that would need an NLI model or an LLM judge per sentence. Each citation quotes the
+sentence of its chunk that shares the most words and numbers with the answer (the whole chunk when none does, as
+for an answer in another language) and also returns the whole chunk. Source text is
 HTML-escaped inside `<source>` tags so a document cannot close its tag and pose as instructions. The threshold is
 a cosine similarity, not the fused search score: the fused score only orders results and always has a winner.
 The threshold (0.58 for BGE-M3) is calibrated by the evaluation, see decision 6.
@@ -152,8 +159,10 @@ Switching is configuration plus re-embedding: `EMBEDDING_MODEL`, and for a 3072-
 
 **Threshold.** Similarity is model-specific, so the threshold is calibrated per model. For BGE-M3 the weakest
 answerable question's best chunk scored 0.588 and the strongest unanswerable near miss 0.618: no threshold separates
-them perfectly. `min_similarity = 0.58` refuses none of the 68 answerable questions and stops 13 of the 20
-unanswerable ones before the language model is called; the rest must be refused by the model (the second gate).
+them perfectly. The most accurate threshold (what `eval/evaluate.py` reports, and the table's answer/abstain
+accuracy) is 0.588 itself: 82 of 88 correct. The service rounds it down to `min_similarity = 0.58` for margin: it
+refuses none of the 68 answerable questions and stops 13 of the 20 unanswerable ones before the language model is
+called (81 of 88); the rest must be refused by the model (the second gate).
 
 **Hybrid search, measured.** With the same embeddings, adding an OR keyword query lowered Recall@5 from 0.90 to
 0.85: common domain words (CDN, آروان) matched almost every chunk and pushed the right one down. The keyword
@@ -191,3 +200,24 @@ about ten lines — while `hazm` would add `nltk` and `huggingface-hub` and pin 
 
 **Limitation.** PDFs that split the لا ligature (`اطلاعات` extracted as `اطالعات`) cannot be repaired without a
 dictionary; vector search still matches these words by meaning, keyword search may miss them.
+
+## 9. Tuning parameters
+
+**Status: Accepted.** Every number the service depends on, where it is set and why.
+
+| Parameter | Value | Where | Why |
+|---|---|---|---|
+| Chunk size / overlap | 1,200 / 150 characters | `ingest.py` | About a section of a documentation page, far below Bge-m3's 8,192-token input limit, so one chunk holds a complete answer and five fit easily in the prompt; the overlap (~12%) keeps a sentence cut at a boundary readable in both chunks. Chunks never cross a page or a Markdown section. Not tuned further: Recall@5 was 0.90 at this size. Constants, not settings: changing them means re-embedding everything. |
+| Embedding batch | 64 chunks per request | `embeddings.py` | 64 × 1,200 = 76,800 characters, well under the provider's 200,000 per request. |
+| Embedding rate limit | 120 requests/min (provider) | not throttled | The SDK retries 429, 5xx and timeouts with exponential backoff (`max_retries=5`, timeout 60 s). One upload of up to 7,680 chunks per minute fits; a larger one, or many concurrent questions, can exceed it and return 503. A production version would queue ingestion and throttle. |
+| Vector column | `vector(1024)` | migration 0002, `models.py` | Bge-m3's dimension; another model needs a migration (3,072 dims: `halfvec`, decision 6). |
+| HNSW index | pgvector defaults: m = 16, ef_construction = 64, ef_search = 40 | migration 0002 | Defaults are recall-oriented for this size; on 1,200 chunks the planner scans exactly anyway (decision 2). Tune `ef_search` when the table grows. |
+| `hnsw.iterative_scan` | `strict_order` | `retrieval.py` | The version join filters after the index scan; iterative scanning keeps searching until enough current chunks are found, in exact distance order (decision 2). |
+| Candidates per search | 20 | `retrieval.py` | Each of the two searches contributes up to 20 before fusion: 4× the final 5, enough for RRF to reorder. |
+| RRF k | 60 | `retrieval.py` | The constant from the RRF paper (Cormack et al., 2009); it damps the weight of the top ranks so neither search dominates. Fusion is by rank, so cosine and `ts_rank_cd` never need a common scale. |
+| top_k | 5 by default; `/search` ≤ 20, `/ask` ≤ 10 | `api.py` | Five chunks are what the evaluation measured (Recall@5) and what the model receives. |
+| `min_similarity` | 0.58 | `config.py`, `MIN_SIMILARITY` | Decision 6. |
+| LLM | `gemma4:e4b-it-qat`, temperature 0, `reasoning_effort` none | `config.py`, `compose.yaml` | Decision 4. Temperature 0: the same question gives the same answer, which makes answers reproducible and testable. |
+| Timeouts / retries | embeddings 60 s / 5; LLM 120 s / 2; `pdftotext` 60 s | `embeddings.py`, `answering.py`, `ingest.py` | Embedding calls are short and rate-limited, so more retries; an LLM call is long, so fewer. A pathological PDF cannot hold a worker for more than a minute. |
+| Upload limit | 20 MB | `config.py`, `MAX_UPLOAD_BYTES` | Uploads are processed synchronously; larger files belong in a background job. |
+| Question length | 1–2,000 characters | `api.py` | A question, not a document. |
