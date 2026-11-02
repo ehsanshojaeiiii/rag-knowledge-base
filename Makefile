@@ -1,11 +1,15 @@
-.PHONY: run down dev test check format
+.PHONY: run run-gpu down dev test check format
 
 run: ## Build and start Postgres, Ollama and the API in Docker
 	docker compose up --build --detach --wait
-	@echo "API: http://localhost:8000  Swagger UI: http://localhost:8000/docs"
+	@echo "Questions: http://localhost:8000  Swagger UI: http://localhost:8000/docs"
 
-down: ## Stop the stack
-	docker compose down
+run-gpu: ## Same, with the language model in Docker Model Runner (Apple GPU on a Mac)
+	docker compose -f compose.yaml -f compose.gpu.yaml up --build --detach --wait
+	@echo "Questions: http://localhost:8000  Swagger UI: http://localhost:8000/docs"
+
+down: ## Stop the stack (either variant)
+	docker compose -f compose.yaml -f compose.gpu.yaml --profile ollama down
 
 dev: ## Run the API locally with auto-reload (Postgres and Ollama in Docker)
 	uv sync

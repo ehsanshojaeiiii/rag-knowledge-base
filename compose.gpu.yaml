@@ -1,0 +1,28 @@
+# `make run-gpu`: the language model runs in Docker Model Runner instead of the Ollama container.
+# On a Mac, Docker containers cannot reach the Apple GPU but Model Runner can (llama.cpp on Metal),
+# which makes answers several times faster. Needs Docker Desktop 4.40+ (Model Runner enabled) or
+# the docker-model-plugin on Linux. Used on top of compose.yaml:
+#   docker compose -f compose.yaml -f compose.gpu.yaml up --build --detach --wait
+services:
+  api:
+    environment: !override
+      DATABASE_URL: postgresql+psycopg://rag:rag@db:5432/rag
+      LLM_REASONING_EFFORT: ${LLM_REASONING_EFFORT:-none}
+    models:
+      llm:
+        endpoint_var: LLM_BASE_URL
+        model_var: LLM_MODEL
+    depends_on: !override
+      db:
+        condition: service_healthy
+
+  # Not started: the model comes from Model Runner.
+  ollama:
+    profiles: [ollama]
+  ollama-pull:
+    profiles: [ollama]
+
+models:
+  llm:
+    model: ${LLM_GPU_MODEL:-ai/gemma4:e4b}
+    context_size: 8192
