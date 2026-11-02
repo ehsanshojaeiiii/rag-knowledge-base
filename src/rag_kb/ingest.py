@@ -98,7 +98,9 @@ def chunk(data: bytes, media_type: str) -> list[TextChunk]:
         if piece.strip()
     ]
     if not chunks:
-        raise UnreadableDocument("No text found; scanned PDFs (images) are not supported")
+        if media_type == "application/pdf":
+            raise UnreadableDocument("No text found; scanned PDFs (images) are not supported")
+        raise UnreadableDocument("The file contains no text")
     return chunks
 
 

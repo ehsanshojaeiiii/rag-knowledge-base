@@ -132,6 +132,20 @@ class TestChunk:
         with pytest.raises(UnreadableDocument):
             chunk(data, kind)
 
+    @pytest.mark.parametrize(
+        ("data", "kind", "message"),
+        [
+            (make_pdf([""]), "application/pdf", "scanned PDFs"),
+            (b"\n\n", "text/markdown", "contains no text"),
+        ],
+        ids=["pdf-without-text", "empty-markdown"],
+    )
+    def test_a_file_without_text_gets_a_message_for_its_type(
+        self, data: bytes, kind: str, message: str
+    ) -> None:
+        with pytest.raises(UnreadableDocument, match=message):
+            chunk(data, kind)
+
     def test_pdf_that_takes_too_long_is_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(ingest, "PDF_TIMEOUT_SECONDS", 0.000001)
         with pytest.raises(UnreadableDocument, match="too long"):
