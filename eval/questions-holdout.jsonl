@@ -3,7 +3,7 @@
 {"q": "How can I automatically copy the objects of one bucket into another bucket for backup?", "pages": ["object-storage/buckets/replication"]}
 {"q": "Can I run SQL queries directly on the files stored in my object storage?", "pages": ["object-storage/query-engine"]}
 {"q": "How do I apply one firewall rule to several of my domains at once?", "pages": ["cdn/security/account-firewall"]}
-{"q": "How do I change my name or contact details in my ArvanCloud profile?", "pages": ["accounts/modify"]}
+{"q": "How do I change my name or contact details in my ArvanCloud profile?", "pages": ["accounts/modify", "accounts"]}
 {"q": "How do I give a teammate access to only the AI service resources?", "pages": ["aiaas/iam"]}
 {"q": "Can the CDN add or rewrite HTTP response headers such as Access-Control-Allow-Origin?", "pages": ["cdn/transform-rules"]}
 {"q": "How do I host files for public download from object storage with CDN caching?", "pages": ["object-storage/download-bucket"]}
@@ -19,7 +19,7 @@
 {"q": "شتاب دهی صندوقچه رو چطوری روشن کنم", "pages": ["object-storage/buckets/acceleration"]}
 {"q": "دیتا کاتالوگ تو فضای ابری چیه", "pages": ["object-storage/data-catalog"]}
 {"q": "تو پیشخان پنل آروان چه چیزایی میبینم", "pages": ["accounts/dashboard"]}
-{"q": "Does ArvanCloud CDN support HTTP/3 and QUIC?", "pages": []}
+{"q": "Does ArvanCloud CDN support HTTP/3 and QUIC?", "pages": ["cdn/https-settings"]}
 {"q": "How much does ArvanCloud object storage cost per GB per month?", "pages": []}
 {"q": "How do I mount ArvanCloud object storage as a persistent volume in Kubernetes?", "pages": []}
 {"q": "چطور یک ماشین مجازی لینوکسی در آروان بسازم؟", "pages": []}
