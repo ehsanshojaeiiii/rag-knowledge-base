@@ -9,27 +9,23 @@ Documents can be added, edited and deleted at any time; answers never use delete
 ## Quick start
 
 Requirements: Docker with Compose, and `make`. The first `make run` downloads the language model
-(`gemma4:e4b-it-qat`, ~6 GB) into an Ollama container; later starts reuse it. On Linux with an NVIDIA GPU, give the
-`ollama` service the GPU (Compose `deploy.resources.reservations.devices`) for faster answers. Docker on macOS
-cannot use the Apple GPU; for GPU speed there, run Ollama natively and point the API at it with a git-ignored
-`compose.override.yaml`:
-
-```yaml
-# OLLAMA_HOST=127.0.0.1:11435 ollama serve   (then: ollama pull gemma4:e4b-it-qat)
-services:
-  api:
-    environment:
-      LLM_BASE_URL: http://host.docker.internal:11435/v1
-```
+(`gemma4:e4b-it-qat`, ~6 GB) into an Ollama container; later starts reuse it.
 
 ```bash
 cp .env.example .env        # then set EMBEDDING_API_KEY
-make run                    # build and start Postgres, Ollama and the API
+make run                    # build and start Postgres, Ollama and the API (runs anywhere, CPU)
+make run-gpu                # or: the model in Docker Model Runner, which uses the Apple GPU on a Mac
 ```
+
+Docker containers on macOS cannot reach the Apple GPU; [Docker Model Runner](https://docs.docker.com/ai/model-runner/)
+(Docker Desktop 4.40+, or the `docker-model-plugin` on Linux) runs the model on the host's GPU while Compose still
+declares it ([compose.gpu.yaml](compose.gpu.yaml)). On Linux with an NVIDIA GPU, `make run` can instead give the
+`ollama` service the GPU (Compose `deploy.resources.reservations.devices`).
 
 If port 5432 is already used by another Postgres, set `DB_PORT=5433` in `.env`.
 
-- API: http://localhost:8000
+- Questions page: http://localhost:8000 — ask, read the answer with its sources, upload, replace and delete
+  documents (one static page over the API; the brief needs no GUI, it makes a demo easier)
 - Swagger UI: http://localhost:8000/docs
 - OpenAPI spec: http://localhost:8000/openapi.json, also committed as [docs/openapi.json](docs/openapi.json)
   (import it into Postman to get a ready collection)
@@ -65,7 +61,8 @@ curl http://localhost:8000/search -H 'Content-Type: application/json' -d '{"quer
 
 ```
 upload → parse (poppler / Markdown headings / text) → normalise Persian → split into chunks → embed → Postgres
-ask    → embed question → hybrid search (vector + keyword, current versions only) → enough evidence?
+ask    → translate question (fa ↔ en) → hybrid search for both (vector + keyword, current versions only)
+       → enough evidence?
        → LLM answers from numbered sources only → citations and numbers verified → answer + citations
 ```
 
@@ -77,7 +74,9 @@ libraries, models, PDF extraction, Persian handling — is recorded with its rea
   document to a new version is a single transaction: questions see the old version or the new one, never a mix.
   The search query itself joins on the current version, so outdated chunks cannot be returned.
 - **Hybrid search**: vector similarity finds paraphrases and cross-language matches; Postgres full-text search finds
-  exact terms such as error codes; the two rankings are fused with Reciprocal Rank Fusion.
+  exact terms such as error codes; the two rankings are fused with Reciprocal Rank Fusion. Each chunk is embedded
+  with its document title and section path, so it keeps the context it was cut from; the question is also searched
+  translated into the other language (Persian ↔ English), so it reaches pages that exist in only one of them.
 - **Two grounding gates**: below a similarity threshold the LLM is not called at all; after the LLM, an answer is
   returned only if it cites sources it was actually given, and every number it states (prices, limits) appears in
   a source it cites. Document text is escaped in the prompt, so a document
@@ -106,16 +105,29 @@ question (accuracy 0.92: one more near miss reaches the model); the model and th
 BGE-M3 is several times faster, fits a standard HNSW index and separates answerable from unanswerable questions as
 well as the larger models; the reasoning and the upgrade path are in [decision 6](docs/decisions.md).
 
-End to end through `/ask`, with Gemma 4 answering: **all 20 unanswerable questions were refused**, and 57 of the 68
-answerable ones were answered with a citation to a labelled page (strict: a correct answer citing a related overview
-page counts as wrong). Gemma 4's "thinking" is turned off (`LLM_REASONING_EFFORT=none`): on the same questions it was
-4–5× slower and not more accurate.
+End to end through `/ask`, with Gemma 4 answering: **all 20 unanswerable questions were refused**, and **61 of the
+68** answerable ones were answered with a citation to a labelled page (strict: a correct answer citing a related
+overview page counts as wrong). Each improvement was kept only when this number rose
+([decision 9](docs/decisions.md)):
+
+| Change (measured 2026-11-02) | Answered (of 68) | Refused (of 20) |
+|---|---|---|
+| First version | 56 | 20 |
+| All retrieved chunks reach the model once the best one clears the threshold | 57 | 20 |
+| Each chunk embedded with its title and section (Recall@1 0.63 → 0.68) | 58 | 20 |
+| The question also searched in the other language | **61** | **20** |
+
+A second set, [eval/questions-holdout.jsonl](eval/questions-holdout.jsonl), was written after this tuning — more
+English, English questions about Persian-only pages, casual spelling, near misses — to check that it generalises:
+**19 of 22 answered, 4 of 4 refused.** Gemma 4's "thinking" is turned off (`LLM_REASONING_EFFORT=none`): on the same
+questions it was 4–5× slower and not more accurate; Gemma 4 12B was 2–3× slower on a 24 GB laptop.
 
 ```bash
 uv run --group eval python eval/fetch_arvan_docs.py     # download the corpus (not committed)
 uv run --group eval python eval/evaluate.py models      # compare the four embedding models
 uv run --group eval python eval/evaluate.py system      # score the running service's search
 uv run --group eval python eval/evaluate.py answers     # score the running service's answers, LLM included
+EVAL_QUESTIONS=eval/questions-holdout.jsonl uv run --group eval python eval/evaluate.py answers   # held-out set
 ```
 
 ## Tests
@@ -127,11 +139,11 @@ deterministic fakes, so tests are fast, free and repeatable.
 |---|---|
 | Process text PDF, plain text and Markdown | `tests/test_ingest.py`, `TestDocumentProcessing` |
 | Add, edit, delete; outdated content never used | `TestChangeManagement` — edit leaves only the new version; a failed edit keeps the old one; stale `If-Match` → 409; an edit overtaken by another while embedding → 409; delete removes every chunk. `TestOutdatedContentIsNeverRetrieved` — search ignores old versions even if a stale chunk is left behind |
-| Retrieve the parts related to the question | `TestRelevantRetrieval` — best chunk ranks first, exact identifiers, Persian half-space spellings, citation fields |
-| Answer only from retrieved content, with traceable citations | `TestGroundedAnswers` — cites document, version and section; the model sees only retrieved sources; document text cannot break out of its source tag; answers without valid citations are withheld; an answer stating a number its source does not contain is withheld; each citation quotes the supporting sentence |
+| Retrieve the parts related to the question | `TestRelevantRetrieval` — best chunk ranks first, exact identifiers, Persian half-space spellings, citation fields; chunks are embedded with their title and section; a translated question reaches a page in the other language |
+| Answer only from retrieved content, with traceable citations | `TestGroundedAnswers` — cites document, version and section; the model sees only retrieved sources; document text cannot break out of its source tag; answers without valid citations are withheld; an answer stating a number its source does not contain is withheld; each citation quotes the supporting sentence, never a heading |
 | Say clearly when information is missing | `TestNotEnoughInformation` — unrelated questions are refused without calling the model; model refusals are reported |
 | Answers follow document changes | `TestAnswersFollowDocumentChanges` — after an edit only the new version reaches the model; after a delete the question is refused |
-| API access with documented endpoints | `TestApiAccess`, `tests/test_openapi.py` (the committed spec matches the code) |
+| API access with documented endpoints | `TestApiAccess`, `tests/test_openapi.py` (the committed spec matches the code), `tests/test_ui.py` (the page is served and never parses API text as HTML) |
 
 ## Development
 
@@ -153,8 +165,13 @@ make format                 # fix formatting
   cited source; it does not verify that the wording of each sentence is supported (that needs an NLI or LLM judge).
 - Embedding requests are not throttled to the provider's 120 requests per minute; the SDK retries after a 429. A
   very large upload, or many questions at once, can exceed the limit and get 503.
-- A question in one language about a short document in the other scores lower similarity and can be refused even
-  when the answer is there (seen at 0.50–0.57 against the 0.58 threshold); the threshold favours refusing over guessing.
+- Ranking: a page on the same topic sometimes outranks the exact page (3 of the 22 held-out misses, e.g. general
+  firewall settings above account-level firewall rules). A cross-encoder reranker (e.g. bge-reranker-v2-m3) over the
+  top 20 is the next step; it was left out to keep the stack at three services.
+- Answers take 1–2 s to refuse and 10–25 s for a long answer on a laptop GPU (Gemma 4 e4b, ~50 tokens/s); the
+  translation adds one short model call. Streaming the answer would show text as it is written.
+- A question in one language about a short document in the other scores lower similarity and can still be refused
+  when the answer is there; the threshold favours refusing over guessing.
 - PDFs that split the Persian لا ligature during text extraction keep that defect; vector search still matches
   such words by meaning, keyword search may miss them.
 - Uploads are processed synchronously; very large documents would move to a background job in production.

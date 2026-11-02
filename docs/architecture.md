@@ -13,7 +13,7 @@ flowchart LR
     end
     subgraph Ask["Ask — answer a question"]
         direction LR
-        Q[Question] --> QE[Embed] --> S[Hybrid search] --> G{Enough<br/>evidence?}
+        Q[Question] --> T[Translate<br/>fa ↔ en] --> QE[Embed both] --> S[Hybrid search<br/>per query, fused] --> G{Enough<br/>evidence?}
         G -- no --> NI[Not enough information]
         G -- yes --> L[LLM writes answer<br/>with citations] --> V[Verify citations] --> A[Answer + sources]
     end
@@ -22,6 +22,7 @@ flowchart LR
     E -. embeddings API .- EMB[[Embedding model]]
     QE -. embeddings API .- EMB
     L -. chat API .- LLM[[LLM]]
+    T -. chat API .- LLM
 ```
 
 | Step | What it does |
@@ -29,8 +30,9 @@ flowchart LR
 | Parse | Extract text; keep page numbers (PDF) and headings (Markdown). |
 | Normalise | One spelling per character (Arabic ي/ك → Persian ی/ک), digits, half-spaces kept, invisible and control characters removed. |
 | Chunk | Split into overlapping pieces of up to 1,200 characters; each keeps its document, version, section (Markdown) or page (PDF). |
-| Embed | Turn each chunk into a vector with the chosen embedding model. |
-| Hybrid search | Vector similarity + keyword match (all words must match), fused by rank (RRF), over **current versions only**. |
+| Embed | Turn each chunk into a vector with the chosen embedding model; the embedded text is the chunk preceded by its document title and section path, so it keeps its context. The stored and quoted text is the chunk alone. |
+| Translate | The LLM translates the question into the other document language (Persian ↔ English); `QUERY_TRANSLATION=false` turns it off. |
+| Hybrid search | Vector similarity + keyword match (all words must match), fused by rank (RRF), over **current versions only**; run for the question and its translation, and the two rankings fused again by rank. |
 | Evidence check | If even the best hit is below the similarity threshold, answer "not enough information" without calling the LLM; otherwise all top hits go to the LLM. |
 | Generate | The LLM answers only from numbered sources and cites them as `[n]`. |
 | Verify | Every `[n]` must be a source we sent, and every number in a sentence must appear in a source that sentence cites (digits normalised, so this works across languages); otherwise "not enough information". Each citation quotes the sentence of its chunk that best matches the answer. |

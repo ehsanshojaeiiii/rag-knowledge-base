@@ -219,7 +219,43 @@ dictionary; vector search still matches these words by meaning, keyword search m
 | RRF k | 60 | `retrieval.py` | The constant from the RRF paper (Cormack et al., 2009); it damps the weight of the top ranks so neither search dominates. Fusion is by rank, so cosine and `ts_rank_cd` never need a common scale. |
 | top_k | 5 by default; `/search` ≤ 20, `/ask` ≤ 10 | `api.py` | Five chunks are what the evaluation measured (Recall@5) and what the model receives. |
 | `min_similarity` | 0.58 | `config.py`, `MIN_SIMILARITY` | Decision 6. |
-| LLM | `gemma4:e4b-it-qat`, temperature 0, `reasoning_effort` none | `config.py`, `compose.yaml` | Decision 4. Temperature 0: the same question gives the same answer, which makes answers reproducible and testable. |
+| `query_translation` | on | `config.py`, `QUERY_TRANSLATION` | Decision 10: +3 answered of 68. |
+| LLM | `gemma4:e4b-it-qat` (`ai/gemma4:e4b` in `make run-gpu`), temperature 0, `reasoning_effort` none | `config.py`, `compose.yaml`, `compose.gpu.yaml` | Decisions 4 and 10. Temperature 0: the same question gives the same answer, which makes answers reproducible and testable. |
 | Timeouts / retries | embeddings 60 s / 5; LLM 120 s / 2; `pdftotext` 60 s | `embeddings.py`, `answering.py`, `ingest.py` | Embedding calls are short and rate-limited, so more retries; an LLM call is long, so fewer. A pathological PDF cannot hold a worker for more than a minute. |
 | Upload limit | 20 MB | `config.py`, `MAX_UPLOAD_BYTES` | Uploads are processed synchronously; larger files belong in a background job. |
 | Question length | 1–2,000 characters | `api.py` | A question, not a document. |
+
+## 10. Improvements after the first version: measured, kept only when they helped
+
+**Status: Accepted** (measured 2026-11-02 with `eval/evaluate.py answers`, Gemma 4 e4b, temperature 0).
+
+**Method.** Each change was measured end to end on the 88 questions; a change stayed only if more answerable
+questions were answered and all 20 unanswerable ones were still refused. Afterwards a held-out set of 26 questions
+(`eval/questions-holdout.jsonl`), written after the tuning, checked that the gains generalise.
+
+| Change | Answered (of 68) | Refused (of 20) | Why it helps |
+|---|---|---|---|
+| First version | 56 | 20 | |
+| Threshold decides *whether* to answer; all top 5 chunks reach the model | 57 | 20 | Filtering each chunk by the threshold dropped the one holding the answer when it ranked second with a lower cosine (a manual's reset steps on the page after its title). |
+| Embed each chunk with its title and section path | 58 | 20 | A chunk cut from "Object storage > Lifecycle" no longer loses that context. Recall@1 0.63 → 0.68, MRR 0.75 → 0.77, best threshold 0.588 → 0.583 (0.58 still refuses no answerable question). |
+| Also search the question translated into the other language, fusing both rankings | **61** | **20** | English questions reach Persian-only pages and the reverse; Bge-m3 alone scores them lower. One extra short LLM call per question. |
+
+Held-out set: 19 of 22 answered, 4 of 4 refused; the same with and without translation, so its gain on the main set
+is real but smaller than on questions written to test it.
+
+**Rejected after measuring.**
+- **Gemma 4 12B** (`gemma4:12b-it-qat`): 12–17 s per answer on an M4 Pro with 24 GB shared with Docker, against
+  ~5 s for e4b, and memory pressure pushed the laptop into swap. Not worth it at this size of question.
+- **Cross-encoder reranker** (`bge-reranker-v2-m3`): the strongest known fix for the remaining misses (a page on
+  the same topic above the exact page), but it needs a fourth service (PyTorch or Text Embeddings Inference). The
+  native TEI build could not load it on macOS; left as the next step.
+- **Real BM25** (ParadeDB `pg_search`, `pg_textsearch`): needs a different Postgres image; keyword search is the
+  secondary signal here.
+
+**GPU.** Docker containers on macOS cannot use the Apple GPU. `make run-gpu` declares the model with Compose
+`models:` and runs it in Docker Model Runner (llama.cpp on Metal, ~50 tokens/s for e4b), keeping a one-command,
+Docker-managed stack; `make run` stays the portable default.
+
+**Questions page.** The brief asks for API access without a GUI. A single static page at `/` (`app.frontend`, no
+build step) makes a demo readable — Persian right to left, citations linked to their quotes — and every piece of
+API text is inserted as text, never parsed as HTML, so a document cannot inject script into the page.
