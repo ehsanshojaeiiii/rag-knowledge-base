@@ -46,9 +46,6 @@
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 8px 18px; }
   button:disabled { opacity: .5; cursor: wait; }
   .hint { color: var(--muted); font-size: 12px; }
-  .examples { flex-direction: column; align-items: stretch; gap: 6px; }
-  .examples .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .examples .group .hint { min-width: 100%; }
   .examples button { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
   .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
   .badge.answered { color: var(--ok); background: var(--ok-bg); }
@@ -124,29 +121,21 @@
 const $ = (id) => document.getElementById(id);
 // Questions about ArvanCloud's documentation, the corpus of eval/; each was answered (or refused)
 // correctly in the evaluation.
-const EXAMPLES = {
-  "Persian": [
-    "چطور کش CDN رو پاک کنم؟",
-    "رمز عبورم یادم رفته، چطور دوباره وارد پنل بشم؟",
-    "NSهای آروان که پسوند ir دارن برای دامنه‌ی com من ثبت نمی‌شن؛ چه کار کنم؟",
-    "چطور برای ورود به حسابم علاوه بر رمز عبور، کد تأیید پیامکی یا اپ Authenticator فعال کنم؟",
-    "شتاب دهی صندوقچه رو چطوری روشن کنم",
-  ],
-  "English": [
-    "How do I whitelist ArvanCloud IPs on my server firewall?",
-    "Limit each visitor to a fixed number of requests per minute to stop abuse",
-    "Migrate my files from AWS S3 to ArvanCloud object storage",
-  ],
-  "English → Persian-only page": [
-    "Can I run SQL queries directly on the files stored in my object storage?",
-    "How can I automatically copy the objects of one bucket into another bucket for backup?",
-  ],
-  "Should be refused": [
-    "Who won the 2022 FIFA World Cup?",
-    "چطور یک ماشین مجازی لینوکسی در آروان بسازم؟",
-    "How much does ArvanCloud object storage cost per GB per month?",
-  ],
-};
+const EXAMPLES = [
+  "چطور کش CDN رو پاک کنم؟",
+  "رمز عبورم یادم رفته، چطور دوباره وارد پنل بشم؟",
+  "NSهای آروان که پسوند ir دارن برای دامنه‌ی com من ثبت نمی‌شن؛ چه کار کنم؟",
+  "چطور برای ورود به حسابم علاوه بر رمز عبور، کد تأیید پیامکی یا اپ Authenticator فعال کنم؟",
+  "شتاب دهی صندوقچه رو چطوری روشن کنم",
+  "How do I whitelist ArvanCloud IPs on my server firewall?",
+  "Limit each visitor to a fixed number of requests per minute to stop abuse",
+  "Migrate my files from AWS S3 to ArvanCloud object storage",
+  "Can I run SQL queries directly on the files stored in my object storage?",
+  "How can I automatically copy the objects of one bucket into another bucket for backup?",
+  "Who won the 2022 FIFA World Cup?",
+  "چطور یک ماشین مجازی لینوکسی در آروان بسازم؟",
+  "How much does ArvanCloud object storage cost per GB per month?",
+];
 
 function el(tag, attributes = {}, ...children) {
   const node = document.createElement(tag);
@@ -313,9 +302,7 @@ $("ask").addEventListener("click", ask);
 $("question").addEventListener("keydown", (event) => {
   if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) ask();
 });
-$("examples").replaceChildren(...Object.entries(EXAMPLES).map(([group, questions]) =>
-  el("div", {class: "group"}, el("span", {class: "hint"}, group),
-    ...questions.map((q) => el("button", {dir: "auto"}, q)))));
+$("examples").replaceChildren(...EXAMPLES.map((q) => el("button", {dir: "auto"}, q)));
 $("examples").addEventListener("click", (event) => {
   if (event.target.tagName !== "BUTTON") return;
   $("question").value = event.target.textContent;
