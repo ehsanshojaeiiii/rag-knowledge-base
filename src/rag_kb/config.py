@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # rounded down so that gate 1 refuses no answerable question (decision 6).
     min_similarity: float = 0.58
 
+    # Also search with the question translated by the LLM (Persian ↔ English), so a question
+    # reaches pages that exist only in the other language. One short LLM call per question.
+    query_translation: bool = True
+
     max_upload_bytes: int = 20 * 1024 * 1024
 
 

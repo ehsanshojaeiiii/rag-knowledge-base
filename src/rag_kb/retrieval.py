@@ -6,7 +6,7 @@ Two searches run in one query and are fused by rank (Reciprocal Rank Fusion):
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from sqlalchemy import text
@@ -80,23 +80,51 @@ class Hit:
     score: float  # fused rank score; only comparable within one search
 
 
-def search(session: Session, embedder: Embedder, question: str, limit: int = 5) -> list[Hit]:
-    question = normalize(question)
-    [embedding] = embedder.embed([question])
+def search(
+    session: Session, embedder: Embedder, question: str, limit: int = 5, translation: str = ""
+) -> list[Hit]:
+    """Search for the question and, when given, its translation, fusing both rankings by rank.
+
+    A translation reaches chunks in the other language: an English question about a page that
+    exists only in Persian scores low against it, the same question in Persian does not.
+    """
+    queries = [normalize(q) for q in (question, translation) if q.strip()]
+    embeddings = embedder.embed(queries)
     # An HNSW index scan finds its nearest rows before the version filter; iterative scanning
     # (pgvector 0.8) keeps searching until enough current chunks are found, in exact order.
     session.execute(text("SET LOCAL hnsw.iterative_scan = strict_order"))
-    rows = session.execute(
-        _SEARCH,
-        {
-            "embedding": str(embedding),
-            "terms": keyword_query(question),
-            "candidates": CANDIDATES,
-            "rrf_k": RRF_K,
-            "limit": limit,
-        },
-    )
-    return [Hit(**row._mapping) for row in rows]
+    rankings = [
+        [
+            Hit(**row._mapping)
+            for row in session.execute(
+                _SEARCH,
+                {
+                    "embedding": str(embedding),
+                    "terms": keyword_query(query),
+                    "candidates": CANDIDATES,
+                    "rrf_k": RRF_K,
+                    "limit": CANDIDATES if len(queries) > 1 else limit,
+                },
+            )
+        ]
+        for query, embedding in zip(queries, embeddings, strict=True)
+    ]
+    if len(rankings) == 1:
+        return rankings[0]
+    return _fuse(rankings)[:limit]
+
+
+def _fuse(rankings: list[list[Hit]]) -> list[Hit]:
+    """Reciprocal Rank Fusion of several rankings; a chunk keeps its best similarity."""
+    best: dict[int, Hit] = {}
+    scores: dict[int, float] = {}
+    for ranking in rankings:
+        for rank, hit in enumerate(ranking, start=1):
+            scores[hit.chunk_id] = scores.get(hit.chunk_id, 0.0) + 1.0 / (RRF_K + rank)
+            if hit.chunk_id not in best or hit.similarity > best[hit.chunk_id].similarity:
+                best[hit.chunk_id] = hit
+    order = sorted(scores, key=lambda chunk_id: (-scores[chunk_id], chunk_id))
+    return [replace(best[chunk_id], score=scores[chunk_id]) for chunk_id in order]
 
 
 def keyword_query(question: str) -> str:

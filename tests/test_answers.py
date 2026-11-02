@@ -8,7 +8,7 @@ from conftest import FakeLLM
 from fastapi.testclient import TestClient
 from test_documents import replace, upload
 
-from rag_kb.answering import NO_ANSWER, cited_sources
+from rag_kb.answering import NO_ANSWER, cited_sources, translate
 
 PLAN_V1 = b"# Pricing\n## Basic plan\nThe basic plan costs 10 dollars per month."
 PLAN_V2 = b"# Pricing\n## Basic plan\nThe basic plan costs 12 dollars per month."
@@ -102,6 +102,22 @@ class TestGroundedAnswers:
         llm.reply = "To choose it:\n1. Open the panel [1].\n2. Pick the 10 dollars plan [1]."
 
         assert ask(client, QUESTION)["status"] == "answered"
+
+    def test_a_translated_question_reaches_a_page_in_the_other_language(
+        self, client: TestClient, llm: FakeLLM
+    ) -> None:
+        wallet = "# کیف پول\nبرای شارژ کیف پول روی پرداخت و افزایش اعتبار کلیک کنید."
+        upload(client, "wallet.md", wallet.encode())
+        question = "How do I top up my wallet?"
+        assert ask(client, question)["status"] == "insufficient_information"
+
+        llm.translation = "شارژ کیف پول"
+        llm.reply = "روی پرداخت و افزایش اعتبار کلیک کنید [1]."
+        result = ask(client, question)
+
+        assert result["status"] == "answered"
+        assert result["citations"][0]["title"] == "wallet"
+        assert llm.translated[-1] == question
 
     def test_quote_is_the_sentence_that_supports_the_answer(
         self, client: TestClient, llm: FakeLLM
@@ -199,3 +215,21 @@ class TestAnswerApi:
 )
 def test_cited_sources(reply: str, expected: list[int]) -> None:
     assert cited_sources(reply, source_count=3) == expected
+
+
+class RecordingLLM:
+    def __init__(self) -> None:
+        self.system = ""
+
+    def complete(self, system: str, user: str) -> str:
+        self.system = system
+        return "the translation\nand anything the model adds"
+
+
+def test_questions_are_translated_into_the_other_document_language() -> None:
+    llm = RecordingLLM()
+
+    assert translate(llm, "کش CDN چیست؟") == "the translation"
+    assert "into English" in llm.system
+    translate(llm, "What is the CDN cache?")
+    assert "into Persian" in llm.system

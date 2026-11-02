@@ -47,13 +47,18 @@ class FakeLLM:
 
     def __init__(self) -> None:
         self.reply = "Grounded answer [1]."
+        self.translation = ""  # the question in the other language; empty searches it alone
         self.prompts: list[str] = []
+        self.translated: list[str] = []
         self.fail = False
 
     def complete(self, system: str, user: str) -> str:
-        self.prompts.append(user)
         if self.fail:
             raise LLMUnavailable("Language model request failed: APIConnectionError")
+        if system.startswith("Translate"):
+            self.translated.append(user)
+            return self.translation
+        self.prompts.append(user)
         return self.reply
 
 
