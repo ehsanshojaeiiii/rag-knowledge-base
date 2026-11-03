@@ -102,8 +102,8 @@ The parameter is sent only when set, because models without reasoning reject it.
 
 **Speed.** Docker on macOS cannot use the Apple GPU, so in `make run` on a Mac Gemma runs on the CPU: measured
 2026-11-02 on the evaluation corpus with thinking off, about 50 s for the first answer (the model loads), then
-5–11 s. With Ollama running natively (README) answers take 1–4 s; on Linux the Ollama container uses an NVIDIA GPU
-when given one.
+5–11 s for short answers. With Ollama on the host (`make run-gpu`, ~58 tokens/s on an M4 Pro) a refusal takes 1–2 s
+and a typical answer 8–13 s; on Linux the Ollama container uses an NVIDIA GPU when given one.
 Larger options: `gemma4:12b` (7.7 GB); Qwen 3.6/3.8 start at ~16–18 GB.
 
 **Grounding.** Two gates: if the best chunk is below the similarity threshold → "not enough information" without
