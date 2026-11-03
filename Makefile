@@ -5,6 +5,7 @@ run: ## Build and start Postgres, Ollama and the API in Docker
 	@echo "Questions: http://localhost:8000  Swagger UI: http://localhost:8000/docs"
 
 run-gpu: ## Same, with the language model in Ollama on the host (uses the Apple GPU on a Mac)
+	@docker compose stop ollama 2>/dev/null || true  # a container from `make run` would hold port 11434
 	@curl -sf http://localhost:11434/api/version >/dev/null || \
 		{ echo "Start Ollama on the host first: ollama serve (install: brew install ollama)"; exit 1; }
 	ollama pull gemma4:e4b-it-qat

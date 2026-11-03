@@ -13,26 +13,46 @@ Requirements: Docker with Compose, and `make`. The first `make run` downloads th
 
 ```bash
 cp .env.example .env        # then set EMBEDDING_API_KEY
-make run                    # build and start Postgres, Ollama and the API (runs anywhere, CPU)
-make run-gpu                # or: the model in Ollama on the host, which uses the Apple GPU on a Mac
+make run                    # build and start Postgres, Ollama and the API (runs anywhere, on the CPU)
 ```
 
-Docker containers on macOS cannot reach the Apple GPU, so `make run` answers on the CPU. `make run-gpu` keeps
-Postgres and the API in Docker and uses [Ollama](https://ollama.com) installed on the host, which runs the same model
-build on the GPU (Metal): about 3× faster ([compose.gpu.yaml](compose.gpu.yaml)). Install it with
-`brew install ollama` and start it with `ollama serve` (or the Ollama app); `make run-gpu` pulls the model. On Linux
-with an NVIDIA GPU, `make run` can instead give the `ollama` service the GPU (Compose
-`deploy.resources.reservations.devices`).
+**Faster on a Mac.** Docker containers on macOS cannot reach the Apple GPU, so `make run` answers on the CPU.
+`make run-gpu` keeps Postgres and the API in Docker and uses [Ollama](https://ollama.com) installed on the Mac, which
+runs the same model build on the GPU (Metal), about 3× faster ([compose.gpu.yaml](compose.gpu.yaml)):
+
+```bash
+brew install ollama         # once
+ollama serve                # keep it running (or open the Ollama app)
+make run-gpu                # in another terminal; stops the Ollama container of `make run` and pulls the model
+```
+
+Before going back to `make run`, stop the host's Ollama: both use port 11434. On Linux with an NVIDIA GPU, `make run`
+can instead give the `ollama` service the GPU (Compose `deploy.resources.reservations.devices`).
 
 If port 5432 is already used by another Postgres, set `DB_PORT=5433` in `.env`.
 
-- Questions page: http://localhost:8000 — ask, read the answer with its sources, upload, replace and delete
-  documents (one static page over the API; the brief needs no GUI, it makes a demo easier)
+- Questions page (a simple UI, below): http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
 - OpenAPI spec: http://localhost:8000/openapi.json, also committed as [docs/openapi.json](docs/openapi.json)
   (import it into Postman to get a ready collection)
 
 Stop with `make down`.
+
+## Questions page
+
+The brief asks for API access only; a simple web page at http://localhost:8000 sits on top of the same API to make
+trying it easy. It is one HTML file ([src/rag_kb/ui/index.html](src/rag_kb/ui/index.html)) served by FastAPI, with
+no build step and no framework.
+
+- **Ask** in Persian or English, or click one of the example questions about ArvanCloud's documentation.
+- **Read the answer** with its sources: each `[n]` marker links to a card with the document, version, section or
+  page, the sentence that supports the answer, and the whole retrieved chunk. Persian reads right to left.
+- **Refusals** say "not enough information" and, when similar pages were found, list them as pointers.
+- **Manage documents**: upload a PDF, Markdown or text file, upload a new version of a document, or delete it — then
+  ask again to see the change take effect.
+
+All text from the API is inserted as text, never parsed as HTML, so a document cannot inject markup or script into
+the page.
 
 ## Using the API
 
@@ -82,9 +102,9 @@ libraries, models, PDF extraction, Persian handling — is recorded with its rea
   translated into the other language (Persian ↔ English), so it reaches pages that exist in only one of them.
 - **Two grounding gates**: below a similarity threshold the LLM is not called at all; after the LLM, an answer is
   returned only if it cites sources it was actually given, and every number it states (prices, limits) appears in
-  a source it cites. Document text is escaped in the prompt, so a document
-  cannot inject instructions. A refusal after similar pages were found lists up to three of them as `related`
-  pointers — the reader gets a lead, and the service still states nothing it could not support.
+  a source it cites. Document text is escaped in the prompt, so a document cannot inject instructions. A refusal
+  after similar pages were found lists up to three of them as `related` pointers — the reader gets a lead, and the
+  service still states nothing it could not support.
 - **Provider-agnostic models**: embeddings and the LLM are reached through the OpenAI-compatible API, so ArvanCloud
   AIaaS, vLLM or a hosted model replace the local Ollama by configuration only.
 
@@ -192,7 +212,8 @@ make format                 # fix formatting
   is then the first `related` pointer. A cross-encoder reranker (e.g. bge-reranker-v2-m3) over the top 20 is the next
   step for the first kind, a larger model for the second; both were measured and left out on a 24 GB laptop.
 - Answers take 1–2 s to refuse and 8–13 s for a typical answer on a laptop GPU (`make run-gpu`, Gemma 4 e4b,
-  ~58 tokens/s), several times longer on CPU (`make run`); the translation adds one short model call. Streaming the answer would show text as it is written.
+  ~58 tokens/s), several times longer on the CPU (`make run`); the translation adds one short model call. Streaming
+  the answer would show text as it is written.
 - A question in one language about a short document in the other scores lower similarity and can still be refused
   when the answer is there; the threshold favours refusing over guessing.
 - PDFs that split the Persian لا ligature during text extraction keep that defect; vector search still matches
